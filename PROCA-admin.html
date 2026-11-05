@@ -9,8 +9,8 @@
 </main><footer><span>© <span id="year"></span> PROCA by Jovan Kalisa</span><span>SMART • SECURE • RELIABLE</span></footer></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
 /* Use the SAME Supabase URL and anon/publishable key as PROCA.html. Never expose service_role. */
-const SUPABASE_URL="https://YOUR-PROJECT-REF.supabase.co";
-const SUPABASE_ANON_KEY="YOUR_SUPABASE_ANON_OR_PUBLISHABLE_KEY";
+const SUPABASE_URL="https://nqjsultnmiaphekgboeq.supabase.co";
+const SUPABASE_ANON_KEY="sb_publishable_1I35hNa1b0up9roor4UR7A_vaW5foGs";
 const configured=!SUPABASE_URL.includes("YOUR-PROJECT")&&!SUPABASE_ANON_KEY.includes("YOUR_SUPABASE");
 const client=configured?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}):null;
 const message=document.getElementById("message");
