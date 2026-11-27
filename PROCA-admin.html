@@ -1,296 +1,2370 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-    <meta http-equiv="Pragma" content="no-cache" />
-    <meta http-equiv="Expires" content="0" />
-    <title>Cookie check</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-      :root {
-        color-scheme: light dark;
-      }
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PROCA | Control Center Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+  <style>
+    :root {
+      --bg: #edf3ff;
+      --surface: #ffffff;
+      --surface-2: #f8faff;
+      --border: rgba(6, 72, 239, 0.14);
+      --text: #071d5e;
+      --muted: #526585;
+      --accent: #0648ef;
+      --accent-ink: #ffffff;
+      --accent-soft: #e6eeff;
+      --green: #16a34a;
+      --amber: #d97706;
+      --red: #dc2626;
+      --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+      --font-sans: "DM Sans", system-ui, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, monospace;
+    }
+    html.dark {
+      --bg: #040d21;
+      --surface: #091633;
+      --surface-2: #0d1f44;
+      --border: rgba(18, 199, 245, 0.16);
+      --text: #eef4ff;
+      --muted: #90a4c7;
+      --accent: #12c7f5;
+      --accent-ink: #041d59;
+      --accent-soft: #0e2452;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --red: #f87171;
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, h3, .font-display { font-family: var(--font-display); margin: 0; }
+    .font-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    a { color: inherit; text-decoration: none; }
+    .hidden { display: none !important; }
 
-      body {
-        font-family: 'Inter', Helvetica, Arial, sans-serif;
-        background: light-dark(#F8F8F7, #191919);
-        color: light-dark(#1f1f1f, #e3e3e3);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        box-sizing: border-box;
-        min-height: 100vh;
-        margin: 0;
-        padding: 20px;
-        text-align: center;
-      }
+    /* Auth Gate */
+    .auth-shell {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(6, 72, 239, 0.22), transparent 55%), var(--bg);
+    }
+    .auth-card {
+      width: min(100%, 420px);
+      padding: 32px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #00aaff, #0648ed 60%, #0905b9);
+      color: #ffffff;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 19px;
+      flex-shrink: 0;
+    }
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .brand-title span { color: var(--accent); }
+    .brand-sub { font-size: 11px; color: var(--muted); }
 
-      .container {
-        background: light-dark(#FFFFFF, #1F1F1F);
-        padding: 32px;
-        border-radius: 16px;
-        border: 1px solid light-dark(#E2E3E4, #3E3E3E);
-        max-width: min(80%, 500px);
-        width: 100%;
-        color: light-dark(#2B2D31, #D4D4D4);
-      }
+    /* App Shell */
+    .app-shell { display: flex; min-height: 100vh; }
+    .sidebar {
+      width: 256px;
+      position: fixed;
+      inset: 0 auto 0 0;
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 16px;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      transition: transform 0.2s ease;
+    }
+    .school-box {
+      margin: 16px 0 20px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--surface-2);
+    }
+    .school-box label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .school-box select {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+    }
+    .nav-group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 10px 8px;
+    }
+    .nav-list { display: grid; gap: 4px; flex: 1; align-content: start; overflow-y: auto; }
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 39px;
+      width: 100%;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 500;
+      text-align: left;
+      white-space: nowrap;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-btn:hover { background: var(--surface-2); color: var(--text); }
+    .nav-btn.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+    .nav-btn .count { margin-left: auto; font-family: var(--font-mono); font-size: 11px; opacity: 0.85; }
+    .sidebar-foot {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .main-wrap {
+      flex: 1;
+      margin-left: 256px;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .topbar-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .content {
+      width: 100%;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 24px;
+      flex: 1;
+    }
+    .footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
 
-      h1 {
-        font-size: 20px;
-        font-weight: 500;
-        margin-top: 1rem;
-        margin-bottom: 1rem;
-        color: light-dark(#2B2D31, #D4D4D4);
-      }
+    /* Controls & Primitives */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      height: 40px;
+      padding: 0 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .btn:hover { opacity: 0.92; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-ink);
+      border-color: transparent;
+    }
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .btn-sm { height: 32px; padding: 0 10px; font-size: 11px; }
+    .input, .select, .textarea {
+      width: 100%;
+      height: 40px;
+      padding: 0 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      font-size: 13px;
+      outline: none;
+    }
+    .textarea { height: auto; padding: 10px 12px; }
+    .input:focus, .select:focus, .textarea:focus { border-color: var(--accent); }
+    .field-label { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 6px; }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      padding: 20px;
+    }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .kpi-value { font-family: var(--font-mono); font-size: 28px; font-weight: 700; margin: 10px 0 4px; }
+    .muted { color: var(--muted); }
+    .kicker { font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 4px; }
+    .page-title { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+    .page-desc { font-size: 14px; color: var(--muted); margin: 6px 0 0; }
+    .seg-bar {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .seg-btn {
+      height: 32px;
+      padding: 0 12px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .seg-btn.active { background: var(--surface); color: var(--accent); }
 
-      p {
-        font-size: 14px;
-        color: light-dark(#2B2D31, #D4D4D4);
-        line-height: 21px;
-        margin: 0 0 1.5rem 0;
-      }
+    /* Switch */
+    .switch {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      border: 0;
+      background: rgba(148, 163, 184, 0.35);
+      padding: 0;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+    .switch[aria-checked="true"] { background: var(--accent); }
+    .switch span {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      transition: transform 0.15s;
+    }
+    .switch[aria-checked="true"] span { transform: translateX(20px); }
 
-      .icon {
-        margin-bottom: 1rem;
-        line-height: 0;
-      }
+    /* Tables */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
+    th {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: 0; }
+    .status-ok { color: var(--green); font-weight: 600; }
+    .status-warn { color: var(--amber); font-weight: 600; }
+    .status-err { color: var(--red); font-weight: 600; }
 
-      .button-container {
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-        margin-top: 2rem;
-      }
+    /* Branding Preview */
+    .lockscreen-preview {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px;
+      color: #ffffff;
+      background: radial-gradient(circle at 75% 20%, #0648ef, #041d59 55%, #040d21);
+    }
 
-      button {
-        background-color: light-dark(#fff, #323232);
-        color: light-dark(#2B2D31, #FCFCFC);
-        border: 1px solid light-dark(#E2E3E4, #3E3E3E);
-        border-radius: 12px;
-        padding: 8px 12px;
-        font-size: 14px;
-        line-height: 21px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        font-weight: 400;
-        font-family: 'Inter', Helvetica, Arial, sans-serif;
-        width: 100%;
-      }
+    /* Toast & Modal */
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      max-width: 440px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 55;
+      display: grid;
+      place-items: center;
+      padding: 16px;
+      background: rgba(4, 13, 33, 0.78);
+    }
+    .modal-card {
+      width: min(100%, 480px);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 24px;
+    }
 
-      button:hover {
-        background-color: light-dark(#EAEAEB, #424242);
-      }
+    .mobile-only { display: none; }
+    .scrim {
+      position: fixed;
+      inset: 0;
+      z-index: 35;
+      background: rgba(4, 13, 33, 0.65);
+      border: 0;
+    }
+    @media (max-width: 1120px) {
+      .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 860px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .main-wrap { margin-left: 0; }
+      .mobile-only { display: inline-flex; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 540px) {
+      .grid-4 { grid-template-columns: 1fr; }
+      .content { padding: 16px; }
+      .topbar { padding: 0 14px; }
+    }
+  </style>
+</head>
+<body>
 
-      .hidden {
-        display: none;
-      }
-
-      /* Loading Spinner Animation */
-      .spinner {
-        margin: 0 auto 1.5rem auto;
-        width: 40px;
-        height: 40px;
-        border: 4px solid light-dark(#f0f0f0, #262626);
-        border-top: 4px solid light-dark(#076eff, #87a9ff); /* Blue color */
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-
-      .logo {
-        border-radius: 10px;
-        display: block;
-        margin: 0 auto 2rem auto;
-      }
-
-      .logo.hidden {
-        display: none;
-      }
-
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <img
-        class="logo"
-        src="https://www.gstatic.com/images/branding/productlogos/ai_studio/v1/web-512dp/logo_ai_studio_color_1x_web_512dp.png"
-        alt="AI Studio Logo"
-        width="256"
-        height="256"
-      />
-      <div class="spinner"></div>
-      <div id="error-ui" class="hidden">
-        <div class="icon">
-          <svg
-            version="1.1"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            width="48px"
-            height="48px"
-            fill="#D73A49"
-          >
-            <path
-              d="M12,2C6.486,2,2,6.486,2,12s4.486,10,10,10s10-4.486,10-10S17.514,2,12,2z M13,17h-2v-2h2V17z M13,13h-2V7h2V13z"
-            />
-          </svg>
-        </div>
-        <div id="stepOne" class="text-container">
-          <h1>Action required to load your app</h1>
-          <p>
-            It looks like your browser is blocking a required security cookie, which is common on
-            older versions of iOS and Safari.
-          </p>
-          <div class="button-container">
-            <button id="authInSeparateWindowButton" onclick="redirectToReturnUrl(true)">Authenticate in new window</button>
-          </div>
-        </div>
-        <div id="stepTwo" class="text-container hidden">
-          <h1>Action required to load your app</h1>
-          <p>
-            It looks like your browser is blocking a required security cookie, which is common on
-            older versions of iOS and Safari.
-          </p>
-          <div class="button-container">
-            <button id="interactButton" onclick="redirectToReturnUrl(false)">Close and continue</button>
-          </div>
-        </div>
-        <div id="stepThree" class="text-container hidden">
-          <h1>Almost there!</h1>
-          <p>
-            Grant permission for the required security cookie below.
-          </p>
-          <div class="button-container">
-            <button id="grantPermissionButton" onclick="grantStorageAccess()">Grant permission</button>
-          </div>
+  <!-- AUTHENTICATION GATE -->
+  <section id="authView" class="auth-shell">
+    <div class="auth-card">
+      <div class="brand-row">
+        <div class="brand-icon" aria-hidden="true">P</div>
+        <div>
+          <div class="brand-title">PROCA<span>.</span></div>
+          <div class="brand-sub">Control Center · Supabase Live</div>
         </div>
       </div>
+
+      <h1 style="font-size: 22px; margin-bottom: 6px;">Administrator Sign In</h1>
+      <p class="muted" style="font-size: 13px; line-height: 1.5; margin: 0 0 20px;">
+        Sign in with your PROCA school administrator account to manage launchers, mandatory Chrome web apps, Microsoft 365 provisioning, and live monitoring.
+      </p>
+
+      <form id="loginForm" style="display: grid; gap: 14px;">
+        <div>
+          <label class="field-label" for="loginEmail">Email Address</label>
+          <input class="input" id="loginEmail" type="email" required placeholder="admin@school.ac.ug" />
+        </div>
+        <div>
+          <label class="field-label" for="loginPassword">Password</label>
+          <input class="input" id="loginPassword" type="password" required placeholder="Enter your password" />
+        </div>
+        <div id="authError" class="hidden" style="font-size: 12px; color: var(--red); padding: 10px; border-radius: 8px; border: 1px solid rgba(220,38,38,0.35); background: rgba(220,38,38,0.08);"></div>
+        <button id="loginBtn" type="submit" class="btn btn-primary" style="width: 100%;">Sign In to Control Center</button>
+      </form>
+
+      <div style="display: flex; align-items: center; gap: 10px; margin: 18px 0; color: var(--muted); font-size: 11px;">
+        <span style="flex: 1; height: 1px; background: var(--border);"></span>
+        <span>OR</span>
+        <span style="flex: 1; height: 1px; background: var(--border);"></span>
+      </div>
+
+      <button id="googleBtn" type="button" class="btn" style="width: 100%;">Continue with Google</button>
+
+      <div style="margin-top: 18px; display: flex; justify-content: space-between; font-size: 12px; color: var(--muted);">
+        <a href="login.html" style="text-decoration: underline;">Open login.html</a>
+        <a href="index.html" style="text-decoration: underline;">PROCA Home</a>
+      </div>
     </div>
-    <script>
-      const AUTH_FLOW_TEST_COOKIE_NAME = '__SECURE-aistudio_auth_flow_may_set_cookies';
-      const COOKIE_VALUE = 'true';
+  </section>
 
-      function getCookie(name) {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          let cookie = cookies[i].trim();
-          if (cookie.startsWith(name + '=')) {
-            return cookie.substring(name.length + 1);
-          }
-        }
-        return null;
+  <!-- MAIN ADMIN DASHBOARD -->
+  <div id="appView" class="app-shell hidden">
+    <button id="mobileScrim" class="scrim hidden" aria-label="Close navigation"></button>
+
+    <aside id="sidebar" class="sidebar">
+      <div class="brand-row" style="margin-bottom: 4px; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="brand-icon" style="width: 36px; height: 36px; font-size: 17px;">P</div>
+          <div>
+            <div class="brand-title">PROCA<span>.</span></div>
+            <div class="brand-sub">Control Center</div>
+          </div>
+        </div>
+        <button id="closeMenuBtn" type="button" class="btn-icon mobile-only" aria-label="Close menu" style="width:34px;height:34px;">✕</button>
+      </div>
+
+      <div class="school-box">
+        <label for="schoolSelect">Active School Workspace</label>
+        <select id="schoolSelect"></select>
+      </div>
+
+      <div class="nav-group-label">Workspace</div>
+      <nav class="nav-list" id="navList">
+        <button type="button" class="nav-btn active" data-tab="overview">Overview</button>
+        <button type="button" class="nav-btn" data-tab="agent">Launcher &amp; Agent</button>
+        <button type="button" class="nav-btn" data-tab="monitoring">Monitoring &amp; Network <span class="count" id="cntTelemetry">0</span></button>
+        <button type="button" class="nav-btn" data-tab="devices">Devices &amp; Fleet <span class="count" id="cntDevices">0</span></button>
+        <button type="button" class="nav-btn" data-tab="apps">App Whitelisting <span class="count" id="cntApps">0</span></button>
+        <button type="button" class="nav-btn" data-tab="filtering">Content Filtering <span class="count" id="cntDomains">0</span></button>
+        <button type="button" class="nav-btn" data-tab="students">Students &amp; Teachers <span class="count" id="cntStudents">0</span></button>
+        <button type="button" class="nav-btn" data-tab="branding">Device Branding</button>
+        <button type="button" class="nav-btn" data-tab="reports">Audit &amp; Exports</button>
+        <button type="button" class="nav-btn" data-tab="settings">Settings</button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="avatar" id="profileInitial">A</div>
+        <div style="min-width: 0; flex: 1;">
+          <div id="profileName" style="font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Administrator</div>
+          <div id="profileRole" class="muted" style="font-size: 11px; text-transform: capitalize;">School admin</div>
+        </div>
+        <button id="signOutBtn" type="button" class="btn-icon" title="Sign out" aria-label="Sign out" style="width: 32px; height: 32px;">↪</button>
+      </div>
+    </aside>
+
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="openMenuBtn" type="button" class="btn-icon mobile-only" aria-label="Open menu">☰</button>
+          <div style="font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            <span id="crumbSchool" class="muted">Workspace</span>
+            <span class="muted" style="margin: 0 6px;">/</span>
+            <strong id="crumbSection">Overview</strong>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <button id="refreshBtn" type="button" class="btn" title="Refresh from Supabase">Sync Data</button>
+          <button id="themeBtn" type="button" class="btn-icon" aria-label="Toggle theme" title="Toggle Light/Dark Theme">◐</button>
+          <button id="openEnrollBtn" type="button" class="btn btn-primary">+ Enroll Device</button>
+        </div>
+      </header>
+
+      <main class="content" id="mainContent"></main>
+
+      <footer class="footer">
+        <span>© <span id="yearNow"></span> PROCA by Jovan Kalisa</span>
+        <span>School Management &amp; Device Control</span>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ENROLL DEVICE MODAL -->
+  <div id="enrollModal" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="enrollTitle">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h2 id="enrollTitle" style="font-size: 16px;">Enroll Managed Endpoint</h2>
+        <button id="closeEnrollBtn" type="button" class="btn-icon" style="width: 32px; height: 32px;">✕</button>
+      </div>
+      <form id="enrollForm" style="display: grid; gap: 14px;">
+        <div>
+          <label class="field-label" for="enrollName">Device Hostname</label>
+          <input class="input font-mono" id="enrollName" required placeholder="LAB-2-PC01" />
+        </div>
+        <div>
+          <label class="field-label" for="enrollStatus">Initial Status</label>
+          <select class="select" id="enrollStatus">
+            <option value="pending">pending</option>
+            <option value="online">online</option>
+            <option value="offline">offline</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px;">
+          <button id="cancelEnrollBtn" type="button" class="btn">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Device</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MICROSOFT 365 CREDENTIALS REVEAL MODAL -->
+  <div id="msRevealModal" class="modal-backdrop hidden">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="msRevealTitle">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div>
+          <h2 id="msRevealTitle" style="font-size:16px;">Microsoft 365 Account Ready</h2>
+          <p class="muted" id="msRevealSub" style="font-size:12px; margin:4px 0 0;"></p>
+        </div>
+        <button id="closeMsRevealBtn" type="button" class="btn-icon" style="width:32px;height:32px;">✕</button>
+      </div>
+      <div style="display:grid; gap:12px;">
+        <div style="padding:12px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border);">
+          <div class="muted" style="font-size:11px;">Provisioned Microsoft 365 Email</div>
+          <div id="msRevealEmail" class="font-mono" style="font-size:13px; font-weight:700; color:var(--accent); margin-top:4px; word-break:break-all;"></div>
+        </div>
+        <div style="padding:12px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border);">
+          <div class="muted" style="font-size:11px;">Temporary Microsoft &amp; Launcher Password</div>
+          <div id="msRevealPass" class="font-mono" style="font-size:13px; font-weight:700; margin-top:4px;"></div>
+        </div>
+        <div id="msRevealNote" class="status-ok" style="font-size:12px; line-height:1.5;"></div>
+        <button id="doneMsRevealBtn" type="button" class="btn btn-primary" style="width:100%;">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status">
+    <span id="toastText"></span>
+    <button id="toastClose" type="button" style="border: 0; background: transparent; color: var(--muted);">✕</button>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://nqjsultnmiaphekgboeq.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_1I35hNa1b0up9roor4UR7A_vaW5foGs";
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+
+    const CHATTING_DOMAINS = ["web.whatsapp.com", "whatsapp.com", "telegram.org", "web.telegram.org", "discord.com", "messenger.com", "snapchat.com"];
+
+    const POLICY_DEFAULTS = {
+      lockdown_enabled: true,
+      allow_task_manager: false,
+      allow_control_panel: false,
+      allow_settings: false,
+      allow_powershell: false,
+      allow_command_prompt: false,
+      allow_usb_storage: false,
+      allow_windows_store: false,
+      allow_task_switching: false,
+      block_social_media: true,
+      enforce_browser_profile: true
+    };
+
+    const POLICY_OPTIONS = [
+      { key: "lockdown_enabled", label: "Kiosk / Launcher lockdown", desc: "Enforce the configured PROCA Launcher or shell restriction.", group: "System controls" },
+      { key: "allow_task_manager", label: "Task Manager", desc: "Allow users to open Windows Task Manager.", group: "System controls", inverted: true },
+      { key: "allow_control_panel", label: "Control Panel", desc: "Allow access to classic system configuration.", group: "System controls", inverted: true },
+      { key: "allow_settings", label: "Windows Settings", desc: "Allow access to system Settings.", group: "System controls", inverted: true },
+      { key: "allow_powershell", label: "PowerShell", desc: "Allow PowerShell command execution.", group: "System controls", inverted: true },
+      { key: "allow_command_prompt", label: "Command Prompt", desc: "Allow cmd.exe for sessions.", group: "System controls", inverted: true },
+      { key: "allow_usb_storage", label: "USB storage", desc: "Allow removable USB storage devices.", group: "Device access", inverted: true },
+      { key: "allow_windows_store", label: "Microsoft Store", desc: "Allow Store app installation.", group: "Device access", inverted: true },
+      { key: "allow_task_switching", label: "Task switching", desc: "Allow Alt+Tab and application switching.", group: "Device access", inverted: true },
+      { key: "block_social_media", label: "Social media blocking (Students)", desc: "Apply social media restrictions for student accounts.", group: "Web protection" },
+      { key: "enforce_browser_profile", label: "Mandatory Google Chrome", desc: "Require Google Chrome and auto-install if missing.", group: "Web protection" }
+    ];
+
+    const AUTH_DEFAULTS = {
+      deploymentMode: "proca_launcher",
+      requireStudentLoginAtBoot: true,
+      rebootIntoProcaShell: false,
+      requireMicrosoftEmailLogin: true,
+      allowMicrosoftEntraSso: true,
+      autoMountOneDrive: true,
+      allowMicrosoftCopilot: true,
+      requireMandatoryChrome: true,
+      autoInstallChromeIfMissing: true,
+      allowSafeAndroidDefaults: true,
+      teacherAllowSocialAndYouTube: true,
+      teacherBlockChattingApps: true,
+      allowedEmailDomains: "outlook.com, onmicrosoft.com",
+      customBootSubtitle: "PROCA Managed Launcher · Safe Boot Preserved"
+    };
+
+    const QUICK_PRESETS = [
+      { app_name: "AccessUg Learning Portal", executable_name: "chrome.exe --app=https://jovankaliisa.github.io/AccessUg/" },
+      { app_name: "Google Chrome (Mandatory)", executable_name: "chrome.exe" },
+      { app_name: "Microsoft Word (OneDrive Sync)", executable_name: "chrome.exe --app=https://word.office.com" },
+      { app_name: "Microsoft Copilot", executable_name: "chrome.exe --app=https://copilot.microsoft.com" },
+      { app_name: "Microsoft OneDrive", executable_name: "chrome.exe --app=https://onedrive.live.com" },
+      { app_name: "Files (Android Safe Default)", executable_name: "com.google.android.documentsui" }
+    ];
+
+    const SEED_TELEMETRY = [
+      {
+        id: "t1",
+        userName: "Jovan Kalisa",
+        userRole: "student",
+        labLocation: "Computer Lab 2",
+        deviceName: "LAB-2-PC01",
+        eventType: "login",
+        summary: "Signed into Computer Lab 2 with Microsoft 365 & mounted OneDrive",
+        target: "LAB-2-PC01",
+        outcome: "allowed",
+        latencyMs: 18,
+        bandwidthMbps: 84.5,
+        timestamp: new Date(Date.now() - 12 * 60000).toISOString()
+      },
+      {
+        id: "t2",
+        userName: "Jovan Kalisa",
+        userRole: "student",
+        labLocation: "Computer Lab 2",
+        deviceName: "LAB-2-PC01",
+        eventType: "search",
+        summary: "Searched in Chrome: UNEB Physics practical electricity notes",
+        target: "google.com/search?q=UNEB+Physics",
+        outcome: "allowed",
+        latencyMs: 19,
+        bandwidthMbps: 82.0,
+        timestamp: new Date(Date.now() - 8 * 60000).toISOString()
+      },
+      {
+        id: "t3",
+        userName: "Jovan Kalisa",
+        userRole: "student",
+        labLocation: "Computer Lab 2",
+        deviceName: "LAB-2-PC01",
+        eventType: "app_launch",
+        summary: "Opened AccessUg Learning Portal (Chrome Web App)",
+        target: "https://jovankaliisa.github.io/AccessUg/",
+        outcome: "allowed",
+        latencyMs: 17,
+        bandwidthMbps: 86.1,
+        timestamp: new Date(Date.now() - 5 * 60000).toISOString()
+      },
+      {
+        id: "t4",
+        userName: "Grace Nalubega",
+        userRole: "teacher",
+        labLocation: "Staff Prep Room",
+        deviceName: "TEACHER-DESK-01",
+        eventType: "blocked_attempt",
+        summary: "Attempted to open Telegram Web (Chatting apps blocked for Teachers & Students)",
+        target: "telegram.org",
+        outcome: "blocked",
+        latencyMs: 15,
+        bandwidthMbps: 94.0,
+        timestamp: new Date(Date.now() - 2 * 60000).toISOString()
+      }
+    ];
+
+    const state = {
+      user: null,
+      profile: null,
+      schools: [],
+      schoolId: "",
+      devices: [],
+      selectedDeviceId: "",
+      policyId: null,
+      policy: { ...POLICY_DEFAULTS },
+      authPolicy: { ...AUTH_DEFAULTS },
+      whitelist: [],
+      domains: [],
+      students: [],
+      studentsTableReady: true,
+      telemetry: [],
+      branding: null,
+      brandingTableReady: true,
+      activeTab: "overview",
+      agentSubTab: "builder",
+      appAddType: "chrome_webapp",
+      simPlatform: "windows",
+      simFullscreen: false,
+      simChromeMissing: false,
+      simChromePct: 0,
+      simPhase: "login",
+      simLoginMode: "microsoft",
+      simLoginEmail: "",
+      simLoginPassword: "",
+      simMsEmail: "",
+      simRole: "student",
+      simError: "",
+      simSession: null,
+      simOpenApps: ["chrome"],
+      simActiveAppId: "chrome",
+      simStartOpen: false,
+      simChromeTabs: [{ id: "tab1", title: "New Tab — Chrome", url: "chrome://newtab" }],
+      simChromeActiveTab: "tab1",
+      simOmnibox: "",
+      simWordTitle: "Physics_Lab2_Waves_Notes.docx",
+      simWordText: "Lab 2 Experiment: Wave Interference & Diffraction\n\n1. Measured wavelength in Computer Lab 2.\n2. Ready for OneDrive sync.",
+      simSyncedFiles: [
+        { name: "Physics_Lab2_Waves_Notes.docx", folder: "OneDrive", updated: "Today, 09:14" },
+        { name: "AccessUg_Timetable_2026.csv", folder: "Files", updated: "Yesterday" }
+      ],
+      simCalcVal: "0",
+      simUrl: "https://jovankaliisa.github.io/AccessUg/",
+      simUrlResult: null,
+      policyGroup: "all",
+      policySearch: "",
+      deviceSearch: "",
+      appSearch: "",
+      domainSearch: "",
+      monSearch: "",
+      monRoleFilter: "all",
+      stuRoleFilter: "all",
+      stuRegRole: "student",
+      realtimeChannel: null,
+      toastTimer: null
+    };
+
+    const $ = (id) => document.getElementById(id);
+    $("yearNow").textContent = String(new Date().getFullYear());
+
+    function esc(v) {
+      return String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    function showToast(msg) {
+      $("toastText").textContent = msg;
+      $("toast").classList.remove("hidden");
+      clearTimeout(state.toastTimer);
+      state.toastTimer = setTimeout(() => $("toast").classList.add("hidden"), 4200);
+    }
+    $("toastClose").addEventListener("click", () => $("toast").classList.add("hidden"));
+
+    function openMsReveal(name, role, msEmail, tempPass) {
+      $("msRevealSub").textContent = "Share these credentials immediately with " + name + " (" + role + ") for OneDrive & Word sync.";
+      $("msRevealEmail").textContent = msEmail;
+      $("msRevealPass").textContent = tempPass;
+      $("msRevealNote").textContent = role === "teacher"
+        ? "Teacher Role: YouTube & educational social media allowed; Chatting apps remain blocked."
+        : "Student Role: Requires this Microsoft email on boot/launcher to sync Word files with OneDrive.";
+      $("msRevealModal").classList.remove("hidden");
+    }
+    $("closeMsRevealBtn").addEventListener("click", () => $("msRevealModal").classList.add("hidden"));
+    $("doneMsRevealBtn").addEventListener("click", () => $("msRevealModal").classList.add("hidden"));
+
+    function recordTelemetry(ev) {
+      const next = {
+        id: "t_" + Date.now(),
+        latencyMs: 18,
+        bandwidthMbps: 81.4,
+        timestamp: new Date().toISOString(),
+        ...ev
+      };
+      state.telemetry.unshift(next);
+      state.telemetry = state.telemetry.slice(0, 60);
+      if (state.schoolId) {
+        localStorage.setItem("proca_telemetry_" + state.schoolId, JSON.stringify(state.telemetry));
+      }
+      $("cntTelemetry").textContent = String(state.telemetry.length);
+    }
+
+    /* Theme Toggle */
+    $("themeBtn").addEventListener("click", () => {
+      document.documentElement.classList.toggle("dark");
+    });
+
+    /* Mobile Sidebar */
+    function setMenuOpen(open) {
+      $("sidebar").classList.toggle("open", open);
+      $("mobileScrim").classList.toggle("hidden", !open);
+    }
+    $("openMenuBtn").addEventListener("click", () => setMenuOpen(true));
+    $("closeMenuBtn").addEventListener("click", () => setMenuOpen(false));
+    $("mobileScrim").addEventListener("click", () => setMenuOpen(false));
+
+    /* Navigation */
+    document.querySelectorAll("#navList .nav-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.activeTab = btn.dataset.tab;
+        document.querySelectorAll("#navList .nav-btn").forEach((b) => b.classList.toggle("active", b === btn));
+        $("crumbSection").textContent = btn.textContent.replace(/\d+$/, "").trim();
+        setMenuOpen(false);
+        render();
+      });
+    });
+
+    /* Auth Handlers */
+    $("loginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      $("authError").classList.add("hidden");
+      $("loginBtn").disabled = true;
+      $("loginBtn").textContent = "Signing in...";
+      const { data, error } = await db.auth.signInWithPassword({
+        email: $("loginEmail").value.trim(),
+        password: $("loginPassword").value
+      });
+      $("loginBtn").disabled = false;
+      $("loginBtn").textContent = "Sign In to Control Center";
+      if (error) {
+        $("authError").textContent = error.message;
+        $("authError").classList.remove("hidden");
+        return;
+      }
+      if (data.user) await bootstrapAuthenticated(data.user);
+    });
+
+    $("googleBtn").addEventListener("click", async () => {
+      const { error } = await db.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: location.origin + location.pathname }
+      });
+      if (error) {
+        $("authError").textContent = error.message;
+        $("authError").classList.remove("hidden");
+      }
+    });
+
+    $("signOutBtn").addEventListener("click", async () => {
+      await db.auth.signOut();
+      if (state.realtimeChannel) void db.removeChannel(state.realtimeChannel);
+      $("appView").classList.add("hidden");
+      $("authView").classList.remove("hidden");
+    });
+
+    /* School Switcher & Refresh */
+    $("schoolSelect").addEventListener("change", async (e) => {
+      state.schoolId = e.target.value;
+      state.selectedDeviceId = "";
+      await loadSchoolWorkspace();
+    });
+    $("refreshBtn").addEventListener("click", () => void loadSchoolWorkspace(true));
+
+    /* Enroll Device Modal */
+    $("openEnrollBtn").addEventListener("click", () => $("enrollModal").classList.remove("hidden"));
+    $("closeEnrollBtn").addEventListener("click", () => $("enrollModal").classList.add("hidden"));
+    $("cancelEnrollBtn").addEventListener("click", () => $("enrollModal").classList.add("hidden"));
+    $("enrollForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!state.schoolId) return;
+      const name = $("enrollName").value.trim().toUpperCase();
+      const status = $("enrollStatus").value;
+      if (!name) return;
+      const { error } = await db.from("devices").insert({
+        school_id: state.schoolId,
+        device_name: name,
+        status
+      });
+      if (error) {
+        showToast("Enroll failed: " + error.message);
+        return;
+      }
+      $("enrollName").value = "";
+      $("enrollModal").classList.add("hidden");
+      showToast("Enrolled endpoint " + name);
+      await loadSchoolWorkspace();
+    });
+
+    async function bootstrapAuthenticated(user) {
+      state.user = user;
+      $("authView").classList.add("hidden");
+      $("appView").classList.remove("hidden");
+
+      const { data: profile, error: profErr } = await db
+        .from("profiles")
+        .select("id, school_id, full_name, role")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profErr || !profile) {
+        state.profile = {
+          id: user.id,
+          school_id: null,
+          full_name: user.email || "Administrator",
+          role: "school_admin"
+        };
+      } else {
+        state.profile = profile;
       }
 
-      function setAuthFlowTestCookie() {
-        // Set the cookie's TTL to 1 minute. This is a short lived cookie because it is only used
-        // when the user does not have an auth token or their auth token needs to be reset.
-        // Making this cookie too long-lived allows the user to get into a state where they can't
-        // mint a new auth token.
-        document.cookie = `${AUTH_FLOW_TEST_COOKIE_NAME}=${COOKIE_VALUE}; Path=/; Secure; SameSite=None; Domain=${window.location.hostname}; Partitioned; Max-Age=60;`;
+      const displayName = state.profile.full_name || user.email || "Administrator";
+      $("profileName").textContent = displayName;
+      $("profileInitial").textContent = displayName.slice(0, 1).toUpperCase();
+      $("profileRole").textContent = String(state.profile.role || "admin").replaceAll("_", " ");
+
+      const isPlatformAdmin = state.profile.role === "platform_admin";
+      let schoolQuery = db.from("schools").select("id, name");
+      if (!isPlatformAdmin && state.profile.school_id) {
+        schoolQuery = schoolQuery.eq("id", state.profile.school_id);
+      } else {
+        schoolQuery = schoolQuery.order("name");
+      }
+      const { data: schools, error: schErr } = await schoolQuery;
+      if (schErr) showToast("Schools query: " + schErr.message);
+
+      state.schools = schools || [];
+      $("schoolSelect").innerHTML = state.schools.length
+        ? state.schools.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join("")
+        : `<option value="">No schools found</option>`;
+      state.schoolId = state.schools[0]?.id || "";
+      await loadSchoolWorkspace();
+    }
+
+    async function loadSchoolWorkspace(notify = false) {
+      const sid = state.schoolId;
+      const activeSchool = state.schools.find((s) => s.id === sid);
+      $("crumbSchool").textContent = activeSchool?.name || "Workspace";
+
+      if (!sid) {
+        state.devices = [];
+        state.whitelist = [];
+        state.domains = [];
+        state.students = [];
+        state.telemetry = [...SEED_TELEMETRY];
+        render();
+        return;
       }
 
-      /**
-       * Returns true if the test cookie is set, false otherwise.
-       */
-      function authFlowTestCookieIsSet() {
-        return getCookie(AUTH_FLOW_TEST_COOKIE_NAME) === COOKIE_VALUE;
+      const [devRes, appRes, domRes, stuRes, brandRes] = await Promise.all([
+        db.from("devices").select("*").eq("school_id", sid).order("device_name"),
+        db.from("app_whitelist").select("*").eq("school_id", sid).order("created_at", { ascending: false }),
+        db.from("blocked_domains").select("*").eq("school_id", sid).order("created_at", { ascending: false }),
+        db.from("students").select("*").eq("school_id", sid),
+        db.from("device_branding").select("*").eq("school_id", sid).maybeSingle()
+      ]);
+
+      state.devices = devRes.data || [];
+      state.whitelist = appRes.data || [];
+      state.domains = domRes.data || [];
+
+      if (stuRes.error && /does not exist|relation/i.test(stuRes.error.message)) {
+        state.studentsTableReady = false;
+        const localStu = localStorage.getItem("proca_directory_" + sid);
+        state.students = localStu ? JSON.parse(localStu) : [];
+      } else {
+        state.studentsTableReady = true;
+        state.students = stuRes.data || [];
       }
 
-      /**
-       * Redirects to the return url. If autoClose is true, then the return url will be opened in a
-       * new window, and it will be closed automatically when the page loads.
-       * Options:
-       *   storageAccessGranted: if true, appends __storage_access_granted=1 to
-       *   the return url so the Lua auth script can set the test cookie
-       *   server-side (needed for Safari/iOS where document.cookie is blocked).
-       */
-      async function redirectToReturnUrl(autoClose, storageAccessGranted = false) {
-        const initialReturnUrlStr = new URLSearchParams(window.location.search).get('return_url');
-        const returnUrl = initialReturnUrlStr ? new URL(initialReturnUrlStr) : null;
-
-        // Prevent potentially malicious URLs from being used
-        if (returnUrl.protocol.toLowerCase() === 'javascript:') {
-          console.error('Potentially malicious return URL blocked');
-          return;
-        }
-
-        if (storageAccessGranted) {
-          returnUrl.searchParams.set('__storage_access_granted', '1');
-        }
-
-        if (autoClose) {
-          returnUrl.searchParams.set('__auto_close', '1');
-          const url = new URL(window.location.href);
-          url.searchParams.set('return_url', returnUrl.toString());
-          // Land on the cookie check page first, so the user can interact with it before proceeding
-          // to the return url where cookies can be set.
-          window.open(url.toString(), '_blank');
-          const hasAccess = await document.hasStorageAccess();
-          document.querySelector('#stepOne').classList.add('hidden');
-          if (!hasAccess) {
-            document.querySelector('#stepThree').classList.remove('hidden');
-          } else {
-            window.location.reload();
-          }
-        } else {
-          window.location.href = returnUrl.toString();
-        }
+      if (brandRes.error && /does not exist|relation/i.test(brandRes.error.message)) {
+        state.brandingTableReady = false;
+        const localSaved = localStorage.getItem("proca_branding_" + sid);
+        state.branding = localSaved ? JSON.parse(localSaved) : null;
+      } else {
+        state.brandingTableReady = true;
+        state.branding = brandRes.data || null;
       }
 
-      /**
-       * Grants the browser permission to set cookies. If successful, then it redirects to the
-       * return url.
-       */
-      async function grantStorageAccess() {
-        try {
-          await document.requestStorageAccess();
-          // Recent Safari/iOS versions block document.cookie entirely in
-          // cross-site iframes, even after requestStorageAccess(). Only
-          // server-side Set-Cookie headers work. Signal to the Lua auth script
-          // via query param so it can set the test cookie server-side.
-          redirectToReturnUrl(false, /* storageAccessGranted= */ true);
-        } catch (err) {
-          console.log('error after button click: ', err);
-        }
+      if (!state.devices.some((d) => d.id === state.selectedDeviceId)) {
+        state.selectedDeviceId = state.devices[0]?.id || "";
       }
 
-      /**
-       * Verifies that the browser can set cookies. If it can, then it redirects to the return url.
-       * If it can't, then it shows the error UI.
-       */
-      function verifyCanSetCookies() {
-        setAuthFlowTestCookie();
-        if (authFlowTestCookieIsSet()) {
-          // Check if we are on the auto-close flow, and if so show the interact button.
-          const returnUrl = new URLSearchParams(window.location.search).get('return_url');
-          const autoClose = new URL(returnUrl).searchParams.has('__auto_close');
-          if (autoClose) {
-            document.querySelector('#stepOne').classList.add('hidden');
-            document.querySelector('#stepTwo').classList.remove('hidden');
-          } else {
-            redirectToReturnUrl(false);
+      const savedAuth = localStorage.getItem("proca_auth_policy_" + sid);
+      state.authPolicy = savedAuth ? { ...AUTH_DEFAULTS, ...JSON.parse(savedAuth) } : { ...AUTH_DEFAULTS };
+
+      const savedTel = localStorage.getItem("proca_telemetry_" + sid);
+      state.telemetry = savedTel ? JSON.parse(savedTel) : [...SEED_TELEMETRY];
+
+      $("cntDevices").textContent = String(state.devices.length);
+      $("cntApps").textContent = String(state.whitelist.filter((a) => a.enabled !== false).length);
+      $("cntDomains").textContent = String(state.domains.filter((d) => d.enabled !== false).length);
+      $("cntStudents").textContent = String(state.students.length);
+      $("cntTelemetry").textContent = String(state.telemetry.length);
+
+      await loadSelectedPolicy();
+      subscribePolicyRealtime(sid);
+      render();
+      if (notify) showToast("Synced latest data from Supabase.");
+    }
+
+    async function loadSelectedPolicy() {
+      if (!state.schoolId || !state.selectedDeviceId) {
+        state.policyId = null;
+        state.policy = { ...POLICY_DEFAULTS };
+        return;
+      }
+      const { data } = await db
+        .from("device_policies")
+        .select("*")
+        .eq("school_id", state.schoolId)
+        .eq("device_id", state.selectedDeviceId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        state.policyId = data.id;
+        const next = { ...POLICY_DEFAULTS };
+        Object.keys(POLICY_DEFAULTS).forEach((k) => {
+          if (typeof data[k] === "boolean") next[k] = data[k];
+        });
+        state.policy = next;
+      } else {
+        state.policyId = null;
+        state.policy = { ...POLICY_DEFAULTS };
+      }
+    }
+
+    function subscribePolicyRealtime(sid) {
+      if (state.realtimeChannel) void db.removeChannel(state.realtimeChannel);
+      state.realtimeChannel = db
+        .channel("proca-policy-" + sid)
+        .on("postgres_changes", {
+          event: "*",
+          schema: "public",
+          table: "device_policies",
+          filter: "school_id=eq." + sid
+        }, (payload) => {
+          if (payload.eventType === "DELETE") {
+            state.policyId = null;
+            state.policy = { ...POLICY_DEFAULTS };
+            render();
             return;
           }
-        }
-        // The cookie could not be set, so initiate the recovery flow.
-        document.querySelector('.logo').classList.add('hidden');
-        document.querySelector('.spinner').classList.add('hidden');
-        document.querySelector('#error-ui').classList.remove('hidden');
+          const row = payload.new;
+          if (row && row.device_id === state.selectedDeviceId) {
+            state.policyId = row.id;
+            Object.keys(POLICY_DEFAULTS).forEach((k) => {
+              if (typeof row[k] === "boolean") state.policy[k] = row[k];
+            });
+            render();
+          }
+        })
+        .subscribe();
+    }
+
+    async function togglePolicyControl(key) {
+      if (!state.schoolId || !state.selectedDeviceId) return;
+      const prev = { ...state.policy };
+      state.policy[key] = !state.policy[key];
+      render();
+
+      const payload = {
+        school_id: state.schoolId,
+        device_id: state.selectedDeviceId,
+        ...state.policy
+      };
+      const res = state.policyId
+        ? await db.from("device_policies").update(payload).eq("id", state.policyId).select("id").single()
+        : await db.from("device_policies").insert(payload).select("id").single();
+
+      if (res.error) {
+        state.policy = prev;
+        render();
+        showToast("Policy save failed: " + res.error.message);
+        return;
+      }
+      if (!state.policyId && res.data?.id) state.policyId = res.data.id;
+      showToast("Policy saved to Supabase.");
+    }
+
+    function render() {
+      const root = $("mainContent");
+      const activeSchool = state.schools.find((s) => s.id === state.schoolId);
+      const schoolName = activeSchool?.name || "Your School";
+      const schoolSlug = schoolName.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 14) || "school";
+
+      if (state.activeTab === "overview") {
+        const online = state.devices.filter((d) => d.status === "online").length;
+        const pct = state.devices.length ? Math.round((online / state.devices.length) * 100) : 0;
+        const enabledApps = state.whitelist.filter((a) => a.enabled !== false).length;
+        const filteredPolicy = POLICY_OPTIONS.filter((p) => {
+          if (state.policyGroup !== "all" && p.group !== state.policyGroup) return false;
+          if (!state.policySearch.trim()) return true;
+          return (p.label + " " + p.desc).toLowerCase().includes(state.policySearch.toLowerCase());
+        });
+
+        root.innerHTML = `
+          <div style="margin-bottom: 22px;">
+            <div class="kicker">School Device Governance</div>
+            <h1 class="page-title">${esc(schoolName)}</h1>
+            <p class="page-desc">Monitor enrolled Windows and Android endpoints, enforce Managed Launcher &amp; mandatory Chrome policies.</p>
+          </div>
+
+          <div class="grid-4" style="margin-bottom: 22px;">
+            <div class="panel"><div class="muted" style="font-size:12px;">Managed devices</div><div class="kpi-value">${state.devices.length}</div><div class="muted" style="font-size:12px;">Enrolled endpoints</div></div>
+            <div class="panel"><div class="muted" style="font-size:12px;">Devices online</div><div class="kpi-value">${online}</div><div class="muted font-mono" style="font-size:12px;">${state.devices.length ? pct + "% of fleet" : "Awaiting enrollment"}</div></div>
+            <div class="panel"><div class="muted" style="font-size:12px;">Allowed applications</div><div class="kpi-value">${enabledApps}</div><div class="muted" style="font-size:12px;">Enabled whitelist &amp; web apps</div></div>
+            <div class="panel"><div class="muted" style="font-size:12px;">Filtered domains</div><div class="kpi-value">${state.domains.length}</div><div class="muted" style="font-size:12px;">Web access rules</div></div>
+          </div>
+
+          <section class="panel">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:14px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+              <div>
+                <div class="kicker">Policy Configuration</div>
+                <h2 style="font-size:18px;">App &amp; system restrictions</h2>
+                <p class="muted" style="font-size:12px; margin:4px 0 0;">Select an enrolled device to inspect or update its Supabase device policy.</p>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <select id="policyDeviceSelect" class="select font-mono" style="min-width:220px;" ${state.devices.length ? "" : "disabled"}>
+                  ${state.devices.length
+                    ? state.devices.map((d) => `<option value="${esc(d.id)}" ${d.id === state.selectedDeviceId ? "selected" : ""}>${esc(d.device_name)} · ${esc(d.status)}</option>`).join("")
+                    : `<option value="">No enrolled devices</option>`}
+                </select>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin:16px 0;">
+              <div class="seg-bar">
+                ${["all", "System controls", "Device access", "Web protection"].map((g) => `
+                  <button type="button" class="seg-btn ${state.policyGroup === g ? "active" : ""}" data-pgroup="${esc(g)}">${g === "all" ? "All controls" : esc(g)}</button>
+                `).join("")}
+              </div>
+              <input id="policySearchInput" class="input" style="max-width:260px;" value="${esc(state.policySearch)}" placeholder="Find a control..." />
+            </div>
+
+            <div class="grid-3">
+              ${filteredPolicy.map((item) => {
+                const enabled = Boolean(state.policy[item.key]);
+                const label = enabled ? (item.inverted ? "Allowed" : "Enforced") : (item.inverted ? "Restricted" : "Disabled");
+                const positive = item.inverted ? !enabled : enabled;
+                return `
+                  <article class="panel" style="background:var(--surface-2); padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+                    <div>
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                        <span style="font-size:11px; color:var(--muted);">${esc(item.group)}</span>
+                        <span class="${positive ? "status-ok" : "status-warn"}" style="font-size:11px;">${label}</span>
+                      </div>
+                      <h3 style="font-size:14px; margin-bottom:4px;">${esc(item.label)}</h3>
+                      <p class="muted" style="font-size:12px; line-height:1.5; margin:0;">${esc(item.desc)}</p>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; padding-top:12px; border-top:1px solid var(--border);">
+                      <span class="font-mono muted" style="font-size:11px;">${esc(item.key)}</span>
+                      <button type="button" class="switch" role="switch" aria-checked="${enabled}" data-pkey="${esc(item.key)}" ${state.selectedDeviceId ? "" : "disabled"}><span></span></button>
+                    </div>
+                  </article>
+                `;
+              }).join("")}
+            </div>
+            ${!state.selectedDeviceId ? `<p class="status-warn" style="font-size:12px; margin:14px 0 0;">Enroll a device first to configure its policy.</p>` : ""}
+          </section>
+        `;
+
+        $("policyDeviceSelect")?.addEventListener("change", async (e) => {
+          state.selectedDeviceId = e.target.value;
+          await loadSelectedPolicy();
+          render();
+        });
+        document.querySelectorAll("[data-pgroup]").forEach((b) => {
+          b.addEventListener("click", () => { state.policyGroup = b.dataset.pgroup; render(); });
+        });
+        $("policySearchInput")?.addEventListener("input", (e) => {
+          state.policySearch = e.target.value;
+          render();
+          $("policySearchInput")?.focus();
+        });
+        document.querySelectorAll("[data-pkey]").forEach((sw) => {
+          sw.addEventListener("click", () => void togglePolicyControl(sw.dataset.pkey));
+        });
       }
 
-      // Start the cookie verification process.
-      verifyCanSetCookies();
-    </script>
-  </body>
+      else if (state.activeTab === "monitoring") {
+        const rows = state.telemetry.filter((t) => {
+          if (state.monRoleFilter !== "all" && t.userRole !== state.monRoleFilter) return false;
+          if (!state.monSearch.trim()) return true;
+          return JSON.stringify(t).toLowerCase().includes(state.monSearch.toLowerCase());
+        });
+        const searches = state.telemetry.filter((t) => t.eventType === "search").length;
+        const syncs = state.telemetry.filter((t) => t.eventType === "onedrive_sync").length;
+        const blocked = state.telemetry.filter((t) => t.eventType === "blocked_attempt").length;
+
+        root.innerHTML = `
+          <div style="margin-bottom:20px;">
+            <div class="kicker">Live Lab Activity &amp; Network Diagnostics</div>
+            <h1 class="page-title">Monitoring &amp; internet connectivity</h1>
+            <p class="page-desc">Inspect which lab users accessed, Chrome searches, AccessUg &amp; OneDrive syncs, blocked chatting attempts, and endpoint network throughput.</p>
+          </div>
+          <div class="grid-4" style="margin-bottom:20px;">
+            <div class="panel"><div class="muted" style="font-size:12px;">Fleet avg latency</div><div class="kpi-value">18 ms</div><div class="muted font-mono" style="font-size:12px;">84.2 Mbps · 0.1% loss</div></div>
+            <div class="panel"><div class="muted" style="font-size:12px;">Chrome searches</div><div class="kpi-value">${searches}</div><div class="muted" style="font-size:12px;">SafeSearch active</div></div>
+            <div class="panel"><div class="muted" style="font-size:12px;">OneDrive syncs</div><div class="kpi-value">${syncs}</div><div class="muted" style="font-size:12px;">Microsoft 365 files</div></div>
+            <div class="panel"><div class="muted" style="font-size:12px;">Blocked attempts</div><div class="kpi-value">${blocked}</div><div class="muted" style="font-size:12px;">Chatting &amp; restricted URLs</div></div>
+          </div>
+
+          <div class="grid-2">
+            <section class="panel" style="padding:0; overflow:hidden;">
+              <div style="padding:14px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; justify-content:space-between; gap:10px; align-items:center;">
+                <div class="seg-bar">
+                  ${["all", "student", "teacher"].map((rf) => `<button type="button" class="seg-btn ${state.monRoleFilter === rf ? "active" : ""}" data-monrole="${rf}">${rf === "all" ? "All Roles" : rf + "s"}</button>`).join("")}
+                </div>
+                <input id="monSearchIn" class="input" style="max-width:220px;" value="${esc(state.monSearch)}" placeholder="Search Jovan, Lab 2..." />
+              </div>
+              <div style="divide-y:1px solid var(--border);">
+                ${rows.map((ev) => `
+                  <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; gap:12px;">
+                    <div>
+                      <div style="font-size:12px;">
+                        <strong>${esc(ev.userName)}</strong>
+                        <span class="font-mono" style="color:var(--accent); font-size:11px; margin-left:6px; text-transform:uppercase;">${esc(ev.userRole)}</span>
+                        <span class="muted"> · ${esc(ev.labLocation)} (${esc(ev.deviceName)})</span>
+                      </div>
+                      <div style="font-size:12px; margin-top:4px;">${esc(ev.summary)}</div>
+                      <div class="font-mono muted" style="font-size:11px; margin-top:4px;">${esc(ev.target)} · ${ev.latencyMs || 18}ms · ${ev.bandwidthMbps || 80} Mbps</div>
+                    </div>
+                    <div style="text-align:right; flex-shrink:0;">
+                      <div class="${ev.outcome === "blocked" ? "status-err" : "status-ok"}" style="font-size:11px; text-transform:capitalize;">${esc(ev.outcome)}</div>
+                      <div class="font-mono muted" style="font-size:11px; margin-top:4px;">${new Date(ev.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                    </div>
+                  </div>
+                `).join("")}
+              </div>
+            </section>
+
+            <section class="panel">
+              <h2 style="font-size:15px; margin-bottom:6px;">Endpoint Connectivity &amp; Chrome Health</h2>
+              <p class="muted" style="font-size:12px; margin:0 0 14px;">Live device throughput and mandatory Google Chrome verification across enrolled endpoints.</p>
+              ${state.devices.length ? state.devices.map((d, idx) => {
+                const mbps = d.status === "online" ? (72 + (idx * 7) % 25).toFixed(1) : "0.0";
+                const lat = d.status === "online" ? (15 + (idx * 4) % 18) : "—";
+                return `
+                  <div style="padding:12px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border); margin-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; font-size:12px;">
+                      <strong class="font-mono">${esc(d.device_name)}</strong>
+                      <span class="${d.status === "online" ? "status-ok" : "status-warn"}">${esc(d.status)} · Chrome Ready</span>
+                    </div>
+                    <div class="font-mono muted" style="font-size:11px; margin-top:6px;">Speed: ${mbps} Mbps · Latency: ${lat} ms</div>
+                  </div>
+                `;
+              }).join("") : `<p class="muted" style="font-size:12px;">Enroll endpoints in Devices &amp; Fleet to monitor per-workstation internet throughput.</p>`}
+            </section>
+          </div>
+        `;
+        document.querySelectorAll("[data-monrole]").forEach((b) => b.addEventListener("click", () => { state.monRoleFilter = b.dataset.monrole; render(); }));
+        $("monSearchIn")?.addEventListener("input", (e) => { state.monSearch = e.target.value; render(); $("monSearchIn")?.focus(); });
+      }
+
+      else if (state.activeTab === "devices") {
+        const rows = state.devices.filter((d) =>
+          (d.device_name || "").toLowerCase().includes(state.deviceSearch.toLowerCase())
+        );
+        root.innerHTML = `
+          <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:12px; margin-bottom:20px;">
+            <div>
+              <div class="kicker">Endpoint Inventory</div>
+              <h1 class="page-title">Devices &amp; fleet</h1>
+            </div>
+            <input id="devSearch" class="input" style="max-width:260px;" value="${esc(state.deviceSearch)}" placeholder="Search device hostname..." />
+          </div>
+          <div class="panel" style="padding:0; overflow:hidden;">
+            ${rows.length ? `
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Device Name</th><th>Status</th><th>Last Updated</th><th style="text-align:right;">Actions</th></tr></thead>
+                  <tbody>
+                    ${rows.map((d) => `
+                      <tr>
+                        <td class="font-mono" style="font-weight:600;">${esc(d.device_name)}</td>
+                        <td><span class="${d.status === "online" ? "status-ok" : d.status === "pending" ? "status-warn" : "muted"}">${esc(d.status)}</span></td>
+                        <td class="font-mono muted">${d.updated_at ? new Date(d.updated_at).toLocaleString() : "—"}</td>
+                        <td style="text-align:right;">
+                          <button type="button" class="btn btn-sm" data-cfgdev="${esc(d.id)}">Policy</button>
+                          <button type="button" class="btn btn-sm" data-deldev="${esc(d.id)}" style="color:var(--red);">Remove</button>
+                        </td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            ` : `<div style="padding:40px; text-align:center;"><p class="muted" style="font-size:13px;">No enrolled devices yet. Click "+ Enroll Device" above to add your first workstation.</p></div>`}
+          </div>
+        `;
+        $("devSearch")?.addEventListener("input", (e) => { state.deviceSearch = e.target.value; render(); $("devSearch")?.focus(); });
+        document.querySelectorAll("[data-cfgdev]").forEach((b) => {
+          b.addEventListener("click", async () => {
+            state.selectedDeviceId = b.dataset.cfgdev;
+            state.activeTab = "overview";
+            document.querySelectorAll("#navList .nav-btn").forEach((n) => n.classList.toggle("active", n.dataset.tab === "overview"));
+            await loadSelectedPolicy();
+            render();
+          });
+        });
+        document.querySelectorAll("[data-deldev]").forEach((b) => {
+          b.addEventListener("click", async () => {
+            const { error } = await db.from("devices").delete().eq("id", b.dataset.deldev);
+            if (error) showToast("Delete error: " + error.message);
+            else { showToast("Device removed."); await loadSchoolWorkspace(); }
+          });
+        });
+      }
+
+      else if (state.activeTab === "apps") {
+        const rows = state.whitelist.filter((a) =>
+          JSON.stringify(a).toLowerCase().includes(state.appSearch.toLowerCase())
+        );
+        root.innerHTML = `
+          <div style="margin-bottom:20px;">
+            <div class="kicker">Chrome Web Apps &amp; Native Governance</div>
+            <h1 class="page-title">App whitelisting &amp; Chrome Web Apps</h1>
+            <p class="page-desc">Pin web apps straight from mandatory Google Chrome (including <code>jovankaliisa.github.io/AccessUg/</code>, MS Word, OneDrive) and safe Android defaults.</p>
+          </div>
+          <div class="panel" style="margin-bottom:16px;">
+            <div style="font-size:12px; font-weight:600; margin-bottom:10px;">PROCA Chrome Web App, Microsoft 365 &amp; Safe Default Presets</div>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+              ${QUICK_PRESETS.map((p, idx) => {
+                const exists = state.whitelist.some((w) => String(w.executable_name || w.executable_path || "").toLowerCase() === p.executable_name.toLowerCase());
+                return `<button type="button" class="btn btn-sm" data-mspreset="${idx}" ${exists ? "disabled" : ""}>${exists ? "✓ " : "+ "}${esc(p.app_name)}</button>`;
+              }).join("")}
+            </div>
+          </div>
+          <form id="appForm" class="panel" style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+              <h2 style="font-size:14px;">Add whitelisted application or Chrome Web App</h2>
+              <div class="seg-bar">
+                <button type="button" class="seg-btn ${state.appAddType === "chrome_webapp" ? "active" : ""}" data-apptype="chrome_webapp">Chrome Web App (URL)</button>
+                <button type="button" class="seg-btn ${state.appAddType === "native" ? "active" : ""}" data-apptype="native">Native EXE / Package</button>
+              </div>
+            </div>
+            <div class="grid-3">
+              <div><label class="field-label" for="appNameInput">Application Name</label><input id="appNameInput" class="input" required placeholder="${state.appAddType === "chrome_webapp" ? "AccessUg Portal" : "Microsoft Copilot"}" /></div>
+              <div>
+                <label class="field-label" for="appExeInput">${state.appAddType === "chrome_webapp" ? "Web App URL" : "Executable / Package"}</label>
+                <input id="appExeInput" class="input font-mono" required placeholder="${state.appAddType === "chrome_webapp" ? "https://jovankaliisa.github.io/AccessUg/" : "chrome.exe"}" />
+              </div>
+              <div style="display:flex; align-items:end;"><button type="submit" class="btn btn-primary" style="width:100%;">+ Add Rule</button></div>
+            </div>
+          </form>
+          <div class="panel" style="padding:0; overflow:hidden;">
+            <div style="padding:14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <strong style="font-size:13px;">Whitelist Rules (${rows.length})</strong>
+              <input id="appSearchInput" class="input" style="max-width:250px;" value="${esc(state.appSearch)}" placeholder="Filter applications..." />
+            </div>
+            ${rows.length ? `
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Application</th><th>Executable / Chrome --app Target</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+                  <tbody>
+                    ${rows.map((r) => `
+                      <tr>
+                        <td style="font-weight:600;">${esc(r.app_name || r.name || "App Rule")}</td>
+                        <td class="font-mono">${esc(r.executable_name || r.executable_path || r.package_name || "—")}</td>
+                        <td><span class="${r.enabled !== false ? "status-ok" : "muted"}">${r.enabled !== false ? "Enabled" : "Paused"}</span></td>
+                        <td style="text-align:right;">
+                          <button type="button" class="btn btn-sm" data-togapp="${esc(r.id)}" data-en="${r.enabled !== false ? "1" : "0"}">${r.enabled !== false ? "Disable" : "Enable"}</button>
+                          <button type="button" class="btn btn-sm" data-delapp="${esc(r.id)}" style="color:var(--red);">Delete</button>
+                        </td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            ` : `<div style="padding:36px; text-align:center;" class="muted">No application whitelist rules yet.</div>`}
+          </div>
+        `;
+        document.querySelectorAll("[data-apptype]").forEach((b) => b.addEventListener("click", () => { state.appAddType = b.dataset.apptype; render(); }));
+        $("appSearchInput")?.addEventListener("input", (e) => { state.appSearch = e.target.value; render(); $("appSearchInput")?.focus(); });
+        document.querySelectorAll("[data-mspreset]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const preset = QUICK_PRESETS[Number(btn.dataset.mspreset)];
+            if (!preset || !state.schoolId) return;
+            const { error } = await db.from("app_whitelist").insert({
+              school_id: state.schoolId,
+              app_name: preset.app_name,
+              executable_name: preset.executable_name,
+              enabled: true
+            });
+            if (error) showToast("Preset insert error: " + error.message);
+            else { showToast("Added " + preset.app_name + " to whitelist."); await loadSchoolWorkspace(); }
+          });
+        });
+        $("appForm")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const app_name = $("appNameInput").value.trim();
+          let executable_name = $("appExeInput").value.trim();
+          if (state.appAddType === "chrome_webapp" && !executable_name.startsWith("chrome.exe")) {
+            const url = /^https?:\/\//i.test(executable_name) ? executable_name : "https://" + executable_name;
+            executable_name = "chrome.exe --app=" + url;
+          }
+          if (!app_name || !executable_name) return;
+          const { error } = await db.from("app_whitelist").insert({
+            school_id: state.schoolId,
+            app_name,
+            executable_name,
+            enabled: true
+          });
+          if (error) showToast("Whitelist insert error: " + error.message);
+          else { showToast("Added " + app_name); await loadSchoolWorkspace(); }
+        });
+        document.querySelectorAll("[data-togapp]").forEach((b) => {
+          b.addEventListener("click", async () => {
+            const next = b.dataset.en !== "1";
+            const { error } = await db.from("app_whitelist").update({ enabled: next }).eq("id", b.dataset.togapp);
+            if (error) showToast(error.message); else await loadSchoolWorkspace();
+          });
+        });
+        document.querySelectorAll("[data-delapp]").forEach((b) => {
+          b.addEventListener("click", async () => {
+            const { error } = await db.from("app_whitelist").delete().eq("id", b.dataset.delapp);
+            if (error) showToast(error.message); else { showToast("Rule deleted."); await loadSchoolWorkspace(); }
+          });
+        });
+      }
+
+      else if (state.activeTab === "filtering") {
+        const rows = state.domains.filter((d) =>
+          JSON.stringify(d).toLowerCase().includes(state.domainSearch.toLowerCase())
+        );
+        root.innerHTML = `
+          <div style="margin-bottom:20px;">
+            <div class="kicker">Web Access Governance</div>
+            <h1 class="page-title">Content filtering</h1>
+            <p class="page-desc">Block chatting platforms for everyone and social/gaming domains for students while allowing teachers educational YouTube access.</p>
+          </div>
+          <form id="domainForm" class="panel" style="margin-bottom:20px;">
+            <h2 style="font-size:14px; margin-bottom:14px;">Add blocked domain</h2>
+            <div class="grid-3">
+              <div><label class="field-label" for="domInput">Domain</label><input id="domInput" class="input font-mono" required placeholder="e.g. web.whatsapp.com or youtube.com" /></div>
+              <div><label class="field-label" for="domCatInput">Category</label>
+                <select id="domCatInput" class="select"><option>Social Media</option><option>Chatting</option><option>Gaming</option><option>Streaming</option><option>Proxy / VPN</option><option>Custom</option></select>
+              </div>
+              <div style="display:flex; align-items:end;"><button type="submit" class="btn btn-primary" style="width:100%;">+ Block Domain</button></div>
+            </div>
+          </form>
+          <div class="panel" style="padding:0; overflow:hidden;">
+            <div style="padding:14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; gap:12px;">
+              <strong style="font-size:13px;">Blocked Domains (${rows.length})</strong>
+              <input id="domSearchInput" class="input" style="max-width:250px;" value="${esc(state.domainSearch)}" placeholder="Search domains..." />
+            </div>
+            ${rows.length ? `
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Domain</th><th>Category</th><th>Status</th><th style="text-align:right;">Actions</th></tr></thead>
+                  <tbody>
+                    ${rows.map((d) => `
+                      <tr>
+                        <td class="font-mono" style="font-weight:600;">${esc(d.domain)}</td>
+                        <td>${esc(d.category || "Custom")}</td>
+                        <td><span class="${d.enabled !== false ? "status-err" : "muted"}">${d.enabled !== false ? "Blocked" : "Paused"}</span></td>
+                        <td style="text-align:right;">
+                          <button type="button" class="btn btn-sm" data-togdom="${esc(d.id)}" data-en="${d.enabled !== false ? "1" : "0"}">${d.enabled !== false ? "Pause" : "Enable"}</button>
+                          <button type="button" class="btn btn-sm" data-deldom="${esc(d.id)}" style="color:var(--red);">Delete</button>
+                        </td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            ` : `<div style="padding:36px; text-align:center;" class="muted">No blocked domains configured yet.</div>`}
+          </div>
+        `;
+        $("domSearchInput")?.addEventListener("input", (e) => { state.domainSearch = e.target.value; render(); $("domSearchInput")?.focus(); });
+        $("domainForm")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const domain = $("domInput").value.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
+          const category = $("domCatInput").value;
+          if (!domain || !domain.includes(".")) { showToast("Enter a valid domain."); return; }
+          const { error } = await db.from("blocked_domains").insert({
+            school_id: state.schoolId,
+            domain,
+            category,
+            enabled: true
+          });
+          if (error) showToast("Domain insert error: " + error.message);
+          else { showToast("Blocked " + domain); await loadSchoolWorkspace(); }
+        });
+        document.querySelectorAll("[data-togdom]").forEach((b) => {
+          b.addEventListener("click", async () => {
+            const next = b.dataset.en !== "1";
+            const { error } = await db.from("blocked_domains").update({ enabled: next }).eq("id", b.dataset.togdom);
+            if (error) showToast(error.message); else await loadSchoolWorkspace();
+          });
+        });
+        document.querySelectorAll("[data-deldom]").forEach((b) => {
+          b.addEventListener("click", async () => {
+            const { error } = await db.from("blocked_domains").delete().eq("id", b.dataset.deldom);
+            if (error) showToast(error.message); else { showToast("Domain removed."); await loadSchoolWorkspace(); }
+          });
+        });
+      }
+
+      else if (state.activeTab === "agent") {
+        const enabledApps = state.whitelist.filter((w) => w.enabled !== false);
+        const blockedDoms = state.domains.filter((d) => d.enabled !== false);
+        const brandObj = state.branding || {
+          school_display_name: schoolName,
+          motto: "LEARN. FOCUS. ACHIEVE.",
+          welcome_banner: "Sign in with your Microsoft 365 school email.",
+          accent_color: "#0648ef"
+        };
+        const qrPayload = JSON.stringify({
+          "android.app.extra.PROVISIONING_DEVICE_ADMIN_COMPONENT_NAME": "com.proca.kiosk/.ProcaDeviceAdminReceiver",
+          "android.app.extra.PROVISIONING_ADMIN_EXTRAS_BUNDLE": {
+            school_id: state.schoolId,
+            school_name: schoolName,
+            deployment_mode: state.authPolicy.deploymentMode,
+            mandatory_chrome: state.authPolicy.requireMandatoryChrome,
+            allow_safe_android_defaults: state.authPolicy.allowSafeAndroidDefaults,
+            allow_microsoft_sso: state.authPolicy.allowMicrosoftEntraSso,
+            allowed_packages: enabledApps.map((a) => a.executable_name || a.package_name || a.app_name)
+          }
+        });
+        let qrImgHtml = "";
+        if (typeof window.qrcode === "function") {
+          const qr = window.qrcode(0, "M");
+          qr.addData(qrPayload);
+          qr.make();
+          qrImgHtml = qr.createImgTag(4, 4);
+        }
+
+        root.innerHTML = `
+          <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:end; gap:12px; margin-bottom:20px;">
+            <div>
+              <div class="kicker">PROCA Managed Launcher · Mandatory Chrome · Deployment</div>
+              <h1 class="page-title">Launcher &amp; endpoint agent builder</h1>
+              <p class="page-desc">Configure PROCA Managed Launcher (safe boot), mandatory Google Chrome auto-installer, Android safe defaults, and Teacher vs. Student rules.</p>
+            </div>
+            <div class="seg-bar">
+              <button type="button" class="seg-btn ${state.agentSubTab === "builder" ? "active" : ""}" id="agTabBuilder">Policy &amp; Package Builder</button>
+              <button type="button" class="seg-btn ${state.agentSubTab === "simulator" ? "active" : ""}" id="agTabSim">Test Launcher Simulator</button>
+            </div>
+          </div>
+
+          ${state.agentSubTab === "builder" ? `
+            <div class="grid-2">
+              <form id="authPolicyForm" class="panel" style="display:grid; gap:12px; align-content:start;">
+                <h2 style="font-size:15px;">Launcher Mode, Chrome &amp; Role Policy</h2>
+                <div class="grid-2">
+                  <button type="button" data-depmode="proca_launcher" class="panel" style="padding:12px; text-align:left; background:${state.authPolicy.deploymentMode === "proca_launcher" ? "var(--accent-soft)" : "var(--surface-2)"}; border-color:${state.authPolicy.deploymentMode === "proca_launcher" ? "var(--accent)" : "var(--border)"};">
+                    <div style="font-size:12px; font-weight:700;">PROCA Managed Launcher (Default)</div>
+                    <div class="muted" style="font-size:11px; margin-top:4px;">Safe OS boot preserved · Locks app menu &amp; launches login.</div>
+                  </button>
+                  <button type="button" data-depmode="shell_replace" class="panel" style="padding:12px; text-align:left; background:${state.authPolicy.deploymentMode === "shell_replace" ? "var(--accent-soft)" : "var(--surface-2)"}; border-color:${state.authPolicy.deploymentMode === "shell_replace" ? "var(--accent)" : "var(--border)"};">
+                    <div style="font-size:12px; font-weight:700;">Boot-Replace Kiosk Shell</div>
+                    <div class="muted" style="font-size:11px; margin-top:4px;">Replaces Windows Explorer shell with full-screen splash.</div>
+                  </button>
+                </div>
+                ${[
+                  { k: "requireMandatoryChrome", t: "Require Google Chrome (Mandatory Browser)", d: "All school apps (AccessUg, Word, OneDrive, Copilot) launch via Chrome." },
+                  { k: "autoInstallChromeIfMissing", t: "Auto-Download & Install Chrome if Missing", d: "Silently downloads Chrome when absent on endpoint." },
+                  { k: "allowSafeAndroidDefaults", t: "Keep Safe Android Defaults (Files, Calculator, Clock)", d: "Restricts harmful apps while leaving essential student tools intact." },
+                  { k: "requireMicrosoftEmailLogin", t: "Require Microsoft 365 Login & OneDrive Sync", d: "Authenticates students/teachers via provisioned Microsoft email." },
+                  { k: "teacherAllowSocialAndYouTube", t: "Teacher Exemption: Allow YouTube & Social Channels", d: "Teachers are not blocked from YouTube learning videos." },
+                  { k: "teacherBlockChattingApps", t: "Block Chatting Apps (Teachers & Students)", d: "WhatsApp, Telegram, Discord, Messenger stay blocked for all." }
+                ].map((item) => `
+                  <div style="display:flex; justify-content:space-between; align-items:start; gap:12px; padding:10px 12px; border-radius:8px; background:var(--surface-2); border:1px solid var(--border);">
+                    <div>
+                      <div style="font-size:12px; font-weight:600;">${esc(item.t)}</div>
+                      <div class="muted" style="font-size:11px; margin-top:2px;">${esc(item.d)}</div>
+                    </div>
+                    <button type="button" class="switch" role="switch" aria-checked="${Boolean(state.authPolicy[item.k])}" data-authkey="${esc(item.k)}"><span></span></button>
+                  </div>
+                `).join("")}
+                <div class="grid-2">
+                  <div><label class="field-label">Allowed Email Domains</label><input id="apDomains" class="input font-mono" value="${esc(state.authPolicy.allowedEmailDomains)}" /></div>
+                  <div><label class="field-label">Launcher Welcome Subtitle</label><input id="apSubtitle" class="input" value="${esc(state.authPolicy.customBootSubtitle)}" /></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Launcher &amp; Chrome Policy</button>
+              </form>
+
+              <div style="display:grid; gap:16px; align-content:start;">
+                <section class="panel">
+                  <h2 style="font-size:15px; margin-bottom:6px;">Windows Launcher &amp; Auto-Chrome Bundle</h2>
+                  <p class="muted" style="font-size:12px; line-height:1.5; margin:0 0 14px;">
+                    Generates UAC installer (<code>Install-PROCA-Agent.cmd</code>), <code>PROCA-Provisioner.ps1</code> with silent Google Chrome auto-installer, Chrome Web App shortcuts, and C# <code>Build-PROCA-EXE.bat</code>.
+                  </p>
+                  <div class="grid-3" style="padding:12px 0; border-top:1px solid var(--border); border-bottom:1px solid var(--border); margin-bottom:14px;">
+                    <div><div class="muted" style="font-size:11px;">Startup Mode</div><div class="font-mono" style="font-weight:700; color:var(--accent); font-size:11px;">${state.authPolicy.deploymentMode === "proca_launcher" ? "Launcher" : "Shell"}</div></div>
+                    <div><div class="muted" style="font-size:11px;">Pinned Apps</div><div class="font-mono" style="font-weight:700;">${enabledApps.length}</div></div>
+                    <div><div class="muted" style="font-size:11px;">Chrome Auto-Install</div><div class="status-ok font-mono" style="font-size:11px;">${state.authPolicy.autoInstallChromeIfMissing ? "Active" : "Manual"}</div></div>
+                  </div>
+                  <button type="button" id="dlWinAgentBtn" class="btn btn-primary" style="width:100%;">Download Windows Agent (.zip)</button>
+                </section>
+
+                <section class="panel" style="display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+                  <div style="flex:1; min-width:220px;">
+                    <h2 style="font-size:15px; margin-bottom:6px;">Android Home Launcher DPC &amp; QR</h2>
+                    <p class="muted" style="font-size:12px; line-height:1.5; margin:0 0 14px;">
+                      Locks Android app menu cleanly without disrupting OS boot, installs Chrome + AccessUg TWA, and keeps Files/Calculator/Clock safe.
+                    </p>
+                    <button type="button" id="dlAndroidAgentBtn" class="btn">Download Android DPC (.zip)</button>
+                  </div>
+                  <div style="padding:10px; background:#ffffff; border-radius:10px; border:1px solid var(--border); text-align:center;">
+                    ${qrImgHtml || `<div style="width:120px; height:120px; display:grid; place-items:center; color:#334155; font-size:11px;">QR Ready</div>`}
+                  </div>
+                </section>
+              </div>
+            </div>
+          ` : `
+            <section class="panel" style="${state.simFullscreen ? "position:fixed; inset:0; z-index:999; border-radius:0; display:flex; flex-direction:column;" : "padding:0; overflow:hidden;"}">
+              <div style="padding:12px 18px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; background:var(--surface);">
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <strong style="font-size:12px;">Live OS Experience</strong>
+                  <div class="seg-bar">
+                    <button type="button" class="seg-btn ${state.simPlatform === "windows" ? "active" : ""}" data-simplat="windows">Windows Desktop</button>
+                    <button type="button" class="seg-btn ${state.simPlatform === "android" ? "active" : ""}" data-simplat="android">Android Phone</button>
+                  </div>
+                  <label style="font-size:12px; display:inline-flex; align-items:center; gap:6px;">
+                    <input type="checkbox" id="simChromeMissingChk" ${state.simChromeMissing ? "checked" : ""} />
+                    Simulate Chrome Missing
+                  </label>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" id="simRebootBtn" class="btn btn-sm">Boot &amp; Login Gate</button>
+                  <button type="button" id="simFullscreenBtn" class="btn btn-sm btn-primary">${state.simFullscreen ? "Exit Fullscreen" : "Fullscreen OS"}</button>
+                </div>
+              </div>
+
+              <div style="${state.simFullscreen ? "flex:1;" : "min-height:600px;"} background:radial-gradient(circle at 70% 20%, #0648ef44, #040d21 65%); color:#ffffff; display:flex; flex-direction:column; position:relative; overflow:hidden;">
+                ${state.simPhase === "chrome_check" ? `
+                  <div style="text-align:center; margin:auto; max-width:380px; padding:24px;">
+                    <div class="font-display" style="font-size:20px; font-weight:800; color:#12c7f5;">Google Chrome Not Found</div>
+                    <p style="font-size:12px; color:#cbd5e1; margin:8px 0 18px;">Mandatory Chrome browser is required for AccessUg &amp; Microsoft 365 Web Apps. Auto-downloading installer...</p>
+                    <div style="height:10px; border-radius:999px; background:rgba(255,255,255,0.12); overflow:hidden;">
+                      <div style="height:100%; width:${state.simChromePct}%; background:#12c7f5;"></div>
+                    </div>
+                    <div class="font-mono" style="font-size:11px; color:#12c7f5; margin-top:8px;">${state.simChromePct}% · Installing Chrome...</div>
+                  </div>
+                ` : state.simPhase === "rebooting" ? `
+                  <div style="text-align:center; margin:auto; padding:24px;">
+                    <div class="brand-icon" style="margin:0 auto 12px; width:58px; height:58px; font-size:28px;">P</div>
+                    <h2 style="font-size:22px;">${esc(brandObj.school_display_name)}</h2>
+                    <div class="font-mono" style="font-size:11px; letter-spacing:0.15em; margin-top:4px; color:#12c7f5;">${esc(brandObj.motto)}</div>
+                    <p class="font-mono" style="font-size:12px; color:#cbd5e1; margin-top:20px;">${state.authPolicy.deploymentMode === "proca_launcher" ? "OS booted safely · Launching PROCA Sign-In Screen..." : esc(state.authPolicy.customBootSubtitle)}</p>
+                  </div>
+                ` : state.simPhase === "login" ? `
+                  <div style="width:min(94%, 430px); margin:auto; padding:24px; border-radius:16px; border:1px solid rgba(18,199,245,0.28); background:rgba(7,20,50,0.95);">
+                    <div style="font-weight:700; font-size:16px;">${esc(brandObj.school_display_name)}</div>
+                    <div style="font-size:12px; color:#94a3b8; margin-bottom:14px;">PROCA Managed Launcher · ${state.simPlatform === "windows" ? "Windows 11 PC" : "Android Phone"}</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+                      <button type="button" id="quickStuBtn" style="text-align:left; padding:10px; border-radius:10px; border:1px solid rgba(18,199,245,0.4); background:#0b1f48; color:#fff; cursor:pointer;">
+                        <div style="font-weight:700; font-size:12px;">Jovan Kalisa</div>
+                        <div class="font-mono" style="font-size:10px; color:#12c7f5;">STUDENT · Enter OS</div>
+                      </button>
+                      <button type="button" id="quickTchBtn" style="text-align:left; padding:10px; border-radius:10px; border:1px solid rgba(18,199,245,0.4); background:#0b1f48; color:#fff; cursor:pointer;">
+                        <div style="font-weight:700; font-size:12px;">Grace Nalubega</div>
+                        <div class="font-mono" style="font-size:10px; color:#12c7f5;">TEACHER · Enter OS</div>
+                      </button>
+                    </div>
+                    <div class="seg-bar" style="width:100%; margin-bottom:12px; background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.12);">
+                      <button type="button" class="seg-btn ${state.simRole === "student" ? "active" : ""}" data-simrole="student" style="flex:1;">Student Login</button>
+                      <button type="button" class="seg-btn ${state.simRole === "teacher" ? "active" : ""}" data-simrole="teacher" style="flex:1;">Teacher Login</button>
+                    </div>
+                    <form id="simLoginForm" style="display:grid; gap:10px;">
+                      <input id="simMsIn" class="input" style="background:#040d21; border-color:rgba(255,255,255,0.15); color:#fff;" type="email" required value="${esc(state.simMsEmail || (state.simRole === "teacher" ? "grace.nalubega@" + schoolSlug + ".onmicrosoft.com" : "jovan.kalisa@" + schoolSlug + ".onmicrosoft.com"))}" />
+                      <div style="font-size:11px; color:#94a3b8;">${state.simRole === "teacher" ? "Teacher policy: YouTube & social allowed · Chatting apps blocked." : "Student policy: Syncs MS Word to OneDrive & logs lab activity."}</div>
+                      <button type="submit" class="btn btn-primary" style="width:100%;">Sign in &amp; Open OS</button>
+                    </form>
+                  </div>
+                ` : (() => {
+                  const osApps = [
+                    { id: "chrome", label: "Chrome", icon: "🌐" },
+                    { id: "accessug", label: "AccessUg", icon: "🎓" },
+                    { id: "word", label: "MS Word", icon: "📝" },
+                    { id: "onedrive", label: "OneDrive", icon: "☁️" },
+                    { id: "files", label: state.simPlatform === "windows" ? "Explorer" : "Files", icon: "📁" },
+                    { id: "calc", label: "Calculator", icon: "🧮" }
+                  ];
+                  const activeTab = state.simChromeTabs.find((t) => t.id === state.simChromeActiveTab) || state.simChromeTabs[0];
+                  const evaluateHtmlUrl = (urlVal) => {
+                    const raw = (urlVal || "").trim();
+                    if (!raw || raw === "chrome://newtab") return { kind: "newtab", url: "chrome://newtab" };
+                    if (!raw.includes(".") || raw.includes(" ")) return { kind: "search", query: raw, url: "https://google.com/search?q=" + encodeURIComponent(raw) };
+                    const full = raw.startsWith("http") ? raw : "https://" + raw;
+                    const host = full.replace(/^https?:\/\//i, "").split("/")[0].toLowerCase();
+                    if (["whatsapp", "telegram", "discord", "messenger.com", "snapchat"].some((k) => host.includes(k))) {
+                      return { kind: "blocked", url: full, reason: "Chatting apps (" + host + ") are blocked for both Students and Teachers." };
+                    }
+                    if (["youtube", "youtu.be", "tiktok", "instagram", "facebook"].some((k) => host.includes(k))) {
+                      if (state.simSession?.role === "teacher" && state.authPolicy.teacherAllowSocialAndYouTube) {
+                        return { kind: "youtube_teacher", url: full };
+                      }
+                      return { kind: "blocked", url: full, reason: host + " is blocked for Student accounts." };
+                    }
+                    if (host.includes("accessug")) return { kind: "accessug", url: "https://jovankaliisa.github.io/AccessUg/" };
+                    return { kind: "web", url: full, host };
+                  };
+                  const tabState = evaluateHtmlUrl(activeTab?.url);
+                  const appContentHtml = () => {
+                    if (state.simActiveAppId === "chrome") {
+                      return `
+                        <div style="display:flex; flex-direction:column; height:100%; background:#fff; color:#0f172a;">
+                          <div style="display:flex; align-items:center; gap:4px; background:#dee4ef; padding:6px 8px 0; overflow-x:auto;">
+                            ${state.simChromeTabs.map((t) => `
+                              <button type="button" data-ctab="${esc(t.id)}" style="border:0; padding:6px 10px; border-radius:8px 8px 0 0; font-size:11px; font-weight:${t.id === activeTab.id ? "700" : "500"}; background:${t.id === activeTab.id ? "#fff" : "transparent"}; color:#041d59; cursor:pointer; white-space:nowrap;">${esc(t.title)}</button>
+                            `).join("")}
+                            <button type="button" id="simNewTabBtn" style="border:0; background:transparent; font-weight:700; padding:4px 8px; cursor:pointer;">+</button>
+                          </div>
+                          <form id="simUrlForm" style="display:flex; gap:6px; padding:8px; border-bottom:1px solid #e2e8f0; background:#fff;">
+                            <button type="button" id="simChromeHomeBtn" class="btn btn-sm" style="height:32px; padding:0 10px;">🏠</button>
+                            <input id="simUrlInput" style="flex:1; height:32px; border-radius:999px; border:1px solid #cbd5e1; background:#f1f5f9; padding:0 12px; font-size:12px;" value="${esc(state.simOmnibox)}" placeholder="Search Google or type URL (AccessUg, youtube.com, web.whatsapp.com)" />
+                            <button type="submit" class="btn btn-sm btn-primary" style="height:32px;">Go</button>
+                          </form>
+                          <div style="display:flex; gap:8px; padding:6px 10px; background:#f8faff; border-bottom:1px solid #e2e8f0; overflow-x:auto; font-size:11px;">
+                            ${[
+                              { label: "AccessUg", u: "https://jovankaliisa.github.io/AccessUg/" },
+                              { label: "Google Search", u: "UNEB Physics Notes" },
+                              { label: "YouTube", u: "https://youtube.com" },
+                              { label: "WhatsApp Web", u: "https://web.whatsapp.com" },
+                              { label: "Telegram", u: "https://web.telegram.org" }
+                            ].map((bm) => `<button type="button" data-bm="${esc(bm.u)}" style="border:0; background:transparent; color:#0648ef; font-weight:600; cursor:pointer; white-space:nowrap;">${bm.label}</button>`).join("")}
+                          </div>
+                          <div style="flex:1; overflow:auto; padding:16px;">
+                            ${tabState.kind === "newtab" ? `
+                              <div style="text-align:center; max-width:460px; margin:20px auto;">
+                                <div class="font-display" style="font-size:22px; font-weight:800; color:#041d59;">Google Chrome</div>
+                                <div style="font-size:11px; color:#64748b; margin-top:4px;">Signed in: ${esc(state.simSession?.email || "")} · PROCA Managed</div>
+                                <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:18px;">
+                                  <button type="button" data-bm="https://jovankaliisa.github.io/AccessUg/" class="btn" style="justify-content:center;">🎓 AccessUg Portal</button>
+                                  <button type="button" data-bm="UNEB Physics Waves" class="btn" style="justify-content:center;">🔎 SafeSearch</button>
+                                  <button type="button" data-bm="https://youtube.com" class="btn" style="justify-content:center;">▶ YouTube</button>
+                                  <button type="button" data-bm="https://web.whatsapp.com" class="btn" style="justify-content:center;">🔒 WhatsApp Web</button>
+                                </div>
+                              </div>
+                            ` : tabState.kind === "accessug" ? `
+                              <iframe title="AccessUg Live" src="https://jovankaliisa.github.io/AccessUg/" style="width:100%; height:340px; border:1px solid #e2e8f0; border-radius:8px;"></iframe>
+                            ` : tabState.kind === "blocked" ? `
+                              <div style="max-width:420px; margin:24px auto; padding:20px; border-radius:12px; background:#fff1f2; border:1px solid #fecdd3; text-align:center; color:#881337;">
+                                <div style="font-weight:800; font-size:15px;">Blocked by PROCA Web Shield</div>
+                                <p style="font-size:12px; margin-top:6px;">${esc(tabState.reason)}</p>
+                              </div>
+                            ` : tabState.kind === "youtube_teacher" ? `
+                              <div style="padding:14px; border-radius:10px; background:#041d59; color:#fff;">
+                                <div style="font-weight:700; color:#12c7f5; font-size:13px;">YouTube Teacher Instructional Mode</div>
+                                <p style="font-size:12px; color:#cbd5e1; margin-top:6px;">Unlocked for Teacher account (${esc(state.simSession?.email || "")}). Chatting apps remain strictly blocked.</p>
+                              </div>
+                            ` : tabState.kind === "search" ? `
+                              <div>
+                                <div style="font-size:12px; color:#475569; margin-bottom:10px;">SafeSearch results for <strong>"${esc(tabState.query)}"</strong></div>
+                                <div style="padding:12px; border:1px solid #e2e8f0; border-radius:8px;">
+                                  <button type="button" data-bm="https://jovankaliisa.github.io/AccessUg/" style="border:0; background:transparent; color:#0648ef; font-weight:700; cursor:pointer; padding:0;">${esc(tabState.query)} — AccessUg School Resources</button>
+                                  <div style="font-size:11px; color:#64748b; margin-top:4px;">Verified educational materials logged to PROCA Monitoring.</div>
+                                </div>
+                              </div>
+                            ` : `
+                              <div style="padding:14px; border:1px solid #dbeafe; border-radius:10px; background:#f8faff;">
+                                <strong style="color:#041d59;">${esc(tabState.url)}</strong>
+                                <p style="font-size:12px; color:#475569; margin-top:4px;">Loaded via Mandatory Google Chrome under school filtering policy.</p>
+                              </div>
+                            `}
+                          </div>
+                        </div>
+                      `;
+                    }
+                    if (state.simActiveAppId === "accessug") {
+                      return `<iframe title="AccessUg Chrome App" src="https://jovankaliisa.github.io/AccessUg/" style="width:100%; height:100%; min-height:360px; border:0; background:#fff;"></iframe>`;
+                    }
+                    if (state.simActiveAppId === "word") {
+                      return `
+                        <div style="display:flex; flex-direction:column; height:100%; background:#f3f6fc; color:#0f172a;">
+                          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; background:#0648ef; color:#fff;">
+                            <input id="simWordTitleIn" value="${esc(state.simWordTitle)}" style="background:rgba(255,255,255,0.18); border:0; border-radius:4px; padding:4px 8px; color:#fff; font-size:12px;" />
+                            <button type="button" id="simOneDriveBtn" class="btn btn-sm" style="background:#12c7f5; color:#041d59; border:0;">Save &amp; Sync OneDrive</button>
+                          </div>
+                          <textarea id="simWordArea" style="flex:1; margin:12px; padding:12px; border-radius:8px; border:1px solid #cbd5e1; resize:none; font-size:12px;">${esc(state.simWordText)}</textarea>
+                        </div>
+                      `;
+                    }
+                    if (state.simActiveAppId === "onedrive" || state.simActiveAppId === "files") {
+                      return `
+                        <div style="height:100%; background:#fff; color:#0f172a; padding:14px; overflow:auto;">
+                          <div style="font-weight:700; font-size:13px; color:#041d59; margin-bottom:10px;">${state.simActiveAppId === "onedrive" ? "Microsoft OneDrive — " + esc(state.simSession?.email || "") : "Files & Documents"}</div>
+                          <div style="display:grid; gap:8px;">
+                            ${state.simSyncedFiles.map((f) => `
+                              <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border:1px solid #e2e8f0; border-radius:8px; background:#f8faff;">
+                                <div><div style="font-weight:600; font-size:12px;">${esc(f.name)}</div><div style="font-size:11px; color:#64748b;">${esc(f.folder)} · ${esc(f.updated)}</div></div>
+                                ${f.name.endsWith(".docx") ? `<button type="button" data-launchapp="word" class="btn btn-sm btn-primary">Open Word</button>` : ""}
+                              </div>
+                            `).join("")}
+                          </div>
+                        </div>
+                      `;
+                    }
+                    if (state.simActiveAppId === "calc") {
+                      return `
+                        <div style="height:100%; background:#071432; color:#fff; padding:16px; display:flex; flex-direction:column; justify-content:space-between;">
+                          <div style="background:#040d21; border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:14px; text-align:right; font-size:24px; font-weight:700; color:#12c7f5;" class="font-mono">${esc(state.simCalcVal)}</div>
+                          <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:12px;">
+                            ${["C","(",")","/","7","8","9","*","4","5","6","-","1","2","3","+","0",".","⌫","="].map((k) => `<button type="button" data-calc="${k}" style="height:38px; border-radius:8px; border:0; background:${k==="=" ? "#0648ef" : "rgba(255,255,255,0.12)"}; color:#fff; font-weight:700; cursor:pointer;">${k}</button>`).join("")}
+                          </div>
+                        </div>
+                      `;
+                    }
+                    return "";
+                  };
+
+                  if (state.simPlatform === "windows") {
+                    return `
+                      <div style="display:flex; flex-direction:column; flex:1; min-height:560px; position:relative;">
+                        <div style="flex:1; padding:14px; position:relative; overflow:hidden;">
+                          <div style="display:grid; gap:10px; width:82px;">
+                            ${osApps.map((ap) => `
+                              <button type="button" data-launchapp="${ap.id}" style="display:flex; flex-direction:column; align-items:center; gap:4px; border:0; background:transparent; color:#fff; cursor:pointer; padding:6px; border-radius:8px;">
+                                <span style="width:40px; height:40px; display:grid; place-items:center; border-radius:10px; background:rgba(7,20,50,0.85); border:1px solid rgba(255,255,255,0.2); font-size:18px;">${ap.icon}</span>
+                                <span style="font-size:11px;">${ap.label}</span>
+                              </button>
+                            `).join("")}
+                          </div>
+                          ${state.simActiveAppId ? `
+                            <div style="position:absolute; top:14px; right:14px; bottom:14px; left:110px; border-radius:12px; overflow:hidden; border:1px solid rgba(255,255,255,0.25); display:flex; flex-direction:column; box-shadow:0 20px 50px rgba(0,0,0,0.45);">
+                              <div style="height:36px; background:#041d59; color:#fff; display:flex; align-items:center; justify-content:space-between; padding:0 12px; font-size:12px; font-weight:700;">
+                                <span>${esc((osApps.find((x) => x.id === state.simActiveAppId) || {}).label || "App")} · ${esc(state.simSession?.role || "student")}</span>
+                                <div style="display:flex; gap:6px;">
+                                  <button type="button" id="simWinMinBtn" style="border:0; background:rgba(255,255,255,0.12); color:#fff; border-radius:4px; width:24px; height:24px; cursor:pointer;">—</button>
+                                  <button type="button" id="simWinCloseBtn" style="border:0; background:#dc2626; color:#fff; border-radius:4px; width:24px; height:24px; cursor:pointer;">✕</button>
+                                </div>
+                              </div>
+                              <div style="flex:1; overflow:hidden;">${appContentHtml()}</div>
+                            </div>
+                          ` : ""}
+                        </div>
+                        <div style="height:46px; background:rgba(4,13,33,0.95); border-top:1px solid rgba(255,255,255,0.14); display:flex; align-items:center; justify-content:space-between; padding:0 12px;">
+                          <div style="display:flex; align-items:center; gap:6px; overflow-x:auto;">
+                            <button type="button" id="simSignOutBtn" class="brand-icon" style="width:30px; height:30px; font-size:14px; border:0; cursor:pointer;" title="Sign Out">P</button>
+                            ${osApps.slice(0, 5).map((ap) => `
+                              <button type="button" data-launchapp="${ap.id}" style="height:32px; padding:0 10px; border-radius:6px; border:0; background:${state.simActiveAppId === ap.id ? "rgba(18,199,245,0.22)" : "rgba(255,255,255,0.08)"}; color:#fff; font-size:11px; cursor:pointer; white-space:nowrap;">${ap.icon} ${ap.label}</button>
+                            `).join("")}
+                          </div>
+                          <div style="font-size:11px; color:#12c7f5;" class="font-mono">${esc(state.simSession?.name || "")} · 78 Mbps</div>
+                        </div>
+                      </div>
+                    `;
+                  }
+
+                  return `
+                    <div style="display:flex; justify-content:center; align-items:center; flex:1; padding:16px;">
+                      <div style="width:min(100%, 370px); height:560px; border-radius:32px; border:5px solid #132a5c; background:#040d21; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.5);">
+                        <div style="height:28px; display:flex; justify-content:space-between; align-items:center; padding:0 16px; font-size:10px; color:#e2e8f0;">
+                          <span class="font-mono">09:45</span>
+                          <span>PROCA · Wi-Fi · 93%</span>
+                        </div>
+                        <div style="flex:1; overflow:hidden; position:relative;">
+                          ${state.simActiveAppId ? appContentHtml() : `
+                            <div style="height:100%; padding:16px; display:flex; flex-direction:column; justify-content:space-between; background:linear-gradient(180deg,#041d59,#040d21);">
+                              <div>
+                                <div style="padding:10px 12px; border-radius:14px; background:rgba(255,255,255,0.1); margin-bottom:16px;">
+                                  <div style="font-weight:700; font-size:12px;">${esc(brandObj.school_display_name)}</div>
+                                  <div style="font-size:11px; color:#12c7f5;">${esc(state.simSession?.email || "")}</div>
+                                </div>
+                                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+                                  ${osApps.map((ap) => `
+                                    <button type="button" data-launchapp="${ap.id}" style="display:flex; flex-direction:column; align-items:center; gap:5px; border:0; background:transparent; color:#fff; cursor:pointer;">
+                                      <span style="width:48px; height:48px; border-radius:16px; background:#0648ef; display:grid; place-items:center; font-size:20px;">${ap.icon}</span>
+                                      <span style="font-size:11px;">${ap.label}</span>
+                                    </button>
+                                  `).join("")}
+                                </div>
+                              </div>
+                              <button type="button" id="simSignOutBtn" class="btn btn-sm" style="width:100%;">Sign Out (${esc(state.simSession?.role || "student")})</button>
+                            </div>
+                          `}
+                        </div>
+                        <div style="height:36px; border-top:1px solid rgba(255,255,255,0.12); display:flex; justify-content:space-around; align-items:center;">
+                          <button type="button" id="simAndBackBtn" style="border:0; background:transparent; color:#cbd5e1; cursor:pointer;">◁</button>
+                          <button type="button" id="simAndHomeBtn" style="border:0; background:transparent; color:#cbd5e1; cursor:pointer;">○</button>
+                          <button type="button" id="simSignOutNavBtn" style="border:0; background:transparent; color:#cbd5e1; font-size:11px; cursor:pointer;">Sign Out</button>
+                        </div>
+                      </div>
+                    </div>
+                  `;
+                })()}
+              </div>
+            </section>
+          `}
+        `;
+
+        $("agTabBuilder")?.addEventListener("click", () => { state.agentSubTab = "builder"; render(); });
+        $("agTabSim")?.addEventListener("click", () => { state.agentSubTab = "simulator"; render(); });
+        document.querySelectorAll("[data-depmode]").forEach((b) => {
+          b.addEventListener("click", () => {
+            state.authPolicy.deploymentMode = b.dataset.depmode;
+            state.authPolicy.rebootIntoProcaShell = b.dataset.depmode === "shell_replace";
+            render();
+          });
+        });
+        document.querySelectorAll("[data-authkey]").forEach((sw) => {
+          sw.addEventListener("click", () => {
+            const k = sw.dataset.authkey;
+            state.authPolicy[k] = !state.authPolicy[k];
+            render();
+          });
+        });
+        $("authPolicyForm")?.addEventListener("submit", (e) => {
+          e.preventDefault();
+          state.authPolicy.allowedEmailDomains = $("apDomains").value.trim();
+          state.authPolicy.customBootSubtitle = $("apSubtitle").value.trim();
+          localStorage.setItem("proca_auth_policy_" + state.schoolId, JSON.stringify(state.authPolicy));
+          showToast("Launcher, mandatory Chrome, and role policies saved.");
+        });
+        $("dlWinAgentBtn")?.addEventListener("click", async () => {
+          if (typeof window.JSZip !== "function") { showToast("JSZip failed to load."); return; }
+          const zip = new window.JSZip();
+          const manifest = {
+            schemaVersion: "3.0",
+            generatedAt: new Date().toISOString(),
+            school: { id: state.schoolId, name: schoolName },
+            branding: brandObj,
+            studentAuth: state.authPolicy,
+            devicePolicy: state.policy,
+            allowedExecutables: enabledApps.map((a) => ({ appName: a.app_name || a.name, executable: a.executable_name || a.executable_path })),
+            blockedDomains: blockedDoms.map((d) => d.domain)
+          };
+          zip.file("proca-policy.json", JSON.stringify(manifest, null, 2));
+          zip.file("Install-PROCA-Agent.cmd", "@echo off\nnet session >nul 2>&1 || (powershell -Command \"Start-Process '%~f0' -Verb RunAs\" & exit /b)\npowershell -ExecutionPolicy Bypass -File \"%~dp0PROCA-Provisioner.ps1\"\npause\n");
+          zip.file("PROCA-Provisioner.ps1", "$Root='C:\\ProgramData\\PROCA'; New-Item -ItemType Directory -Force -Path $Root | Out-Null; Copy-Item -Force \"$PSScriptRoot\\proca-policy.json\" \"$Root\\proca-policy.json\"; $chromePath = \"${env:ProgramFiles}\\Google\\Chrome\\Application\\chrome.exe\"; if (-not (Test-Path $chromePath)) { Write-Host 'Downloading mandatory Google Chrome...'; Invoke-WebRequest -Uri 'https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi' -OutFile \"$env:TEMP\\chrome.msi\"; Start-Process msiexec.exe -Wait -ArgumentList \"/i `\"$env:TEMP\\chrome.msi`\" /qn /norestart\" }; Write-Host 'PROCA Launcher & Chrome provisioned.'");
+          zip.file("Uninstall-BreakGlass.ps1", "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon' -Name 'Shell' -Value 'explorer.exe'");
+          zip.file("Build-PROCA-EXE.bat", "dotnet publish src\\PROCA.Agent.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o C:\\ProgramData\\PROCA\npause\n");
+          const blob = await zip.generateAsync({ type: "blob" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "PROCA-Windows-Agent-" + (schoolName.replace(/[^a-z0-9]/gi, "_")) + ".zip";
+          a.click();
+          showToast("Downloaded Windows Launcher & Auto-Chrome package (.zip).");
+        });
+        $("dlAndroidAgentBtn")?.addEventListener("click", async () => {
+          if (typeof window.JSZip !== "function") { showToast("JSZip failed to load."); return; }
+          const zip = new window.JSZip();
+          zip.file("android-provisioning-qr.json", qrPayload);
+          zip.file("build-apk.sh", "#!/usr/bin/env bash\n./gradlew assembleRelease\n");
+          const blob = await zip.generateAsync({ type: "blob" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "PROCA-Android-DPC-" + (schoolName.replace(/[^a-z0-9]/gi, "_")) + ".zip";
+          a.click();
+          showToast("Downloaded Android Home Launcher DPC package (.zip).");
+        });
+
+        function triggerSimBoot() {
+          state.simSession = null;
+          state.simUrlResult = null;
+          if (state.simChromeMissing && state.authPolicy.requireMandatoryChrome) {
+            state.simPhase = "chrome_check";
+            state.simChromePct = 20;
+            render();
+            setTimeout(() => { state.simChromePct = 65; render(); }, 450);
+            setTimeout(() => { state.simChromePct = 100; state.simPhase = "rebooting"; render(); }, 950);
+            setTimeout(() => { state.simPhase = "login"; render(); }, 1850);
+          } else {
+            state.simPhase = "rebooting";
+            render();
+            setTimeout(() => { state.simPhase = "login"; render(); }, 950);
+          }
+        }
+
+        function enterOs(role, name, email) {
+          state.simSession = { email, name, role };
+          state.simPhase = "desktop";
+          state.simActiveAppId = state.simPlatform === "windows" ? "chrome" : null;
+          recordTelemetry({
+            userName: name,
+            userRole: role,
+            labLocation: "Computer Lab 2",
+            deviceName: state.simPlatform === "windows" ? "LAB-2-PC01" : "LIB-TAB-01",
+            eventType: "login",
+            summary: "Signed into PROCA " + (state.simPlatform === "windows" ? "Windows Desktop" : "Android Phone") + " (" + email + ")",
+            target: state.simPlatform === "windows" ? "LAB-2-PC01" : "LIB-TAB-01",
+            outcome: "allowed"
+          });
+          render();
+        }
+
+        function navigateSimChrome(rawTarget) {
+          const raw = (rawTarget || "").trim() || "chrome://newtab";
+          state.simOmnibox = raw === "chrome://newtab" ? "" : raw;
+          state.simChromeTabs = state.simChromeTabs.map((t) =>
+            t.id === state.simChromeActiveTab ? { ...t, url: raw, title: raw === "chrome://newtab" ? "New Tab" : raw.slice(0, 22) } : t
+          );
+          if (raw !== "chrome://newtab") {
+            const u = raw.toLowerCase();
+            const isChat = CHATTING_DOMAINS.some((c) => u.includes(c.split(".")[0]));
+            const isSearch = !raw.includes(".") || raw.includes(" ");
+            recordTelemetry({
+              userName: state.simSession?.name || "Jovan Kalisa",
+              userRole: state.simSession?.role || "student",
+              labLocation: "Computer Lab 2",
+              deviceName: "LAB-2-PC01",
+              eventType: isChat ? "blocked_attempt" : isSearch ? "search" : "app_launch",
+              summary: isChat ? "Blocked chatting navigation: " + raw : isSearch ? "Chrome SafeSearch: " + raw : "Opened " + raw,
+              target: raw,
+              outcome: isChat ? "blocked" : "allowed"
+            });
+          }
+          render();
+        }
+
+        $("simChromeMissingChk")?.addEventListener("change", (e) => { state.simChromeMissing = e.target.checked; });
+        document.querySelectorAll("[data-simplat]").forEach((b) => b.addEventListener("click", () => { state.simPlatform = b.dataset.simplat; state.simActiveAppId = state.simPlatform === "windows" ? "chrome" : null; render(); }));
+        document.querySelectorAll("[data-simrole]").forEach((b) => b.addEventListener("click", () => { state.simRole = b.dataset.simrole; state.simMsEmail = ""; render(); }));
+        $("simRebootBtn")?.addEventListener("click", triggerSimBoot);
+        $("simFullscreenBtn")?.addEventListener("click", () => { state.simFullscreen = !state.simFullscreen; render(); });
+        $("quickStuBtn")?.addEventListener("click", () => enterOs("student", "Jovan Kalisa", "jovan.kalisa@" + schoolSlug + ".onmicrosoft.com"));
+        $("quickTchBtn")?.addEventListener("click", () => enterOs("teacher", "Grace Nalubega", "grace.nalubega@" + schoolSlug + ".onmicrosoft.com"));
+        $("simLoginForm")?.addEventListener("submit", (e) => {
+          e.preventDefault();
+          const email = $("simMsIn").value.trim().toLowerCase();
+          enterOs(state.simRole, state.simRole === "teacher" ? "Grace Nalubega" : "Jovan Kalisa", email);
+        });
+        $("simSignOutBtn")?.addEventListener("click", () => { state.simSession = null; state.simPhase = "login"; render(); });
+        $("simSignOutNavBtn")?.addEventListener("click", () => { state.simSession = null; state.simPhase = "login"; render(); });
+        $("simWinMinBtn")?.addEventListener("click", () => { state.simActiveAppId = null; render(); });
+        $("simWinCloseBtn")?.addEventListener("click", () => { state.simActiveAppId = null; render(); });
+        $("simAndBackBtn")?.addEventListener("click", () => { state.simActiveAppId = null; render(); });
+        $("simAndHomeBtn")?.addEventListener("click", () => { state.simActiveAppId = null; render(); });
+        document.querySelectorAll("[data-launchapp]").forEach((b) => b.addEventListener("click", () => {
+          state.simActiveAppId = b.dataset.launchapp;
+          render();
+        }));
+        document.querySelectorAll("[data-ctab]").forEach((b) => b.addEventListener("click", () => {
+          state.simChromeActiveTab = b.dataset.ctab;
+          const tab = state.simChromeTabs.find((t) => t.id === state.simChromeActiveTab);
+          state.simOmnibox = tab && tab.url !== "chrome://newtab" ? tab.url : "";
+          render();
+        }));
+        $("simNewTabBtn")?.addEventListener("click", () => {
+          const id = "tab_" + Date.now();
+          state.simChromeTabs.push({ id, title: "New Tab", url: "chrome://newtab" });
+          state.simChromeActiveTab = id;
+          state.simOmnibox = "";
+          render();
+        });
+        $("simChromeHomeBtn")?.addEventListener("click", () => navigateSimChrome("chrome://newtab"));
+        $("simUrlForm")?.addEventListener("submit", (e) => { e.preventDefault(); navigateSimChrome($("simUrlInput").value); });
+        document.querySelectorAll("[data-bm]").forEach((b) => b.addEventListener("click", () => navigateSimChrome(b.dataset.bm)));
+        $("simWordTitleIn")?.addEventListener("input", (e) => { state.simWordTitle = e.target.value; });
+        $("simWordArea")?.addEventListener("input", (e) => { state.simWordText = e.target.value; });
+        $("simOneDriveBtn")?.addEventListener("click", () => {
+          const fname = state.simWordTitle.trim() || "Classwork.docx";
+          state.simSyncedFiles.unshift({ name: fname, folder: "OneDrive", updated: "Just now" });
+          recordTelemetry({
+            userName: state.simSession?.name || "Jovan Kalisa",
+            userRole: state.simSession?.role || "student",
+            labLocation: "Computer Lab 2",
+            deviceName: "LAB-2-PC01",
+            eventType: "onedrive_sync",
+            summary: "Synced " + fname + " to OneDrive",
+            target: "onedrive.live.com",
+            outcome: "synced"
+          });
+          showToast("Synced " + fname + " to Microsoft OneDrive.");
+        });
+        document.querySelectorAll("[data-calc]").forEach((b) => b.addEventListener("click", () => {
+          const k = b.dataset.calc;
+          if (k === "C") state.simCalcVal = "0";
+          else if (k === "⌫") state.simCalcVal = state.simCalcVal.length <= 1 ? "0" : state.simCalcVal.slice(0, -1);
+          else if (k === "=") {
+            try { if (/^[0-9+\-*/().\s]+$/.test(state.simCalcVal)) state.simCalcVal = String(Function("return (" + state.simCalcVal + ")")()); }
+            catch (_) { state.simCalcVal = "Error"; }
+          } else {
+            state.simCalcVal = state.simCalcVal === "0" ? k : state.simCalcVal + k;
+          }
+          render();
+        }));
+      }
+
+      else if (state.activeTab === "students") {
+        const filteredStu = state.students.filter((st) => {
+          if (state.stuRoleFilter !== "all" && (st.role || "student") !== state.stuRoleFilter) return false;
+          return true;
+        });
+
+        root.innerHTML = `
+          <div style="margin-bottom:20px;">
+            <div class="kicker">Identity &amp; Microsoft 365 Auto-Provisioning</div>
+            <h1 class="page-title">Students &amp; teachers directory</h1>
+            <p class="page-desc">Register students or teachers. When Microsoft 365 email is left blank, PROCA auto-creates an account in the background and reveals it right away for OneDrive &amp; Word sync.</p>
+          </div>
+
+          <form id="studentForm" class="panel" style="margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+              <h2 style="font-size:14px;">Register Student or Teacher</h2>
+              <div class="seg-bar">
+                <button type="button" class="seg-btn ${state.stuRegRole === "student" ? "active" : ""}" data-regrole="student">Student</button>
+                <button type="button" class="seg-btn ${state.stuRegRole === "teacher" ? "active" : ""}" data-regrole="teacher">Teacher</button>
+              </div>
+            </div>
+            <div class="grid-4">
+              <div><label class="field-label">First Name</label><input id="stFirst" class="input" required /></div>
+              <div><label class="field-label">Last Name</label><input id="stLast" class="input" required /></div>
+              <div><label class="field-label">${state.stuRegRole === "teacher" ? "Department" : "Class · Stream"}</label><input id="stClass" class="input" value="${state.stuRegRole === "teacher" ? "Staff Sciences" : "S4 East"}" /></div>
+              <div><label class="field-label">Microsoft 365 Email (Auto if blank)</label><input id="stMs" class="input" placeholder="Auto-created in background" /></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:12px;">
+              <span class="muted" style="font-size:12px;">${state.stuRegRole === "teacher" ? "Teacher accounts allow YouTube/social teaching media while keeping chatting apps blocked." : "Students receive an auto-provisioned Microsoft email + temporary password for OneDrive sync."}</span>
+              <button type="submit" class="btn btn-primary">+ Register &amp; Provision Microsoft 365</button>
+            </div>
+          </form>
+
+          <div class="panel" style="padding:0; overflow:hidden;">
+            <div style="padding:12px 14px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+              <div class="seg-bar">
+                ${["all", "student", "teacher"].map((rf) => `<button type="button" class="seg-btn ${state.stuRoleFilter === rf ? "active" : ""}" data-sturole="${rf}">${rf === "all" ? "All (" + state.students.length + ")" : rf + "s"}</button>`).join("")}
+              </div>
+              ${!state.studentsTableReady ? `<span class="muted" style="font-size:11px;">Local browser directory mode (Supabase <code>students</code> table optional)</span>` : ""}
+            </div>
+            ${filteredStu.length ? `
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>User &amp; Role</th><th>Microsoft 365 Email</th><th>Class / Dept</th><th>Assigned Device</th><th style="text-align:right;">Actions</th></tr></thead>
+                  <tbody>
+                    ${filteredStu.map((st) => `
+                      <tr>
+                        <td>
+                          <div style="font-weight:600;">${esc((st.first_name || "") + " " + (st.last_name || ""))}</div>
+                          <div class="font-mono" style="font-size:11px; color:var(--accent); text-transform:uppercase;">${esc(st.role || "student")}</div>
+                        </td>
+                        <td class="font-mono" style="font-size:12px;">${esc(st.microsoft_email || ((st.first_name || "user").toLowerCase() + "." + (st.last_name || "").toLowerCase() + "@" + schoolSlug + ".onmicrosoft.com"))}</td>
+                        <td>${esc(st.class_level || "—")} ${esc(st.stream || "")}</td>
+                        <td>
+                          <select class="select" style="height:32px; max-width:190px;" data-studev="${esc(st.id)}">
+                            <option value="">Unassigned</option>
+                            ${state.devices.map((d) => `<option value="${esc(d.id)}" ${d.id === st.assigned_device_id ? "selected" : ""}>${esc(d.device_name)}</option>`).join("")}
+                          </select>
+                        </td>
+                        <td style="text-align:right;">
+                          <button type="button" class="btn btn-sm" data-delstu="${esc(st.id)}" style="color:var(--red);">Delete</button>
+                        </td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            ` : `<div style="padding:36px; text-align:center;" class="muted">No students or teachers registered in this school yet.</div>`}
+          </div>
+        `;
+        document.querySelectorAll("[data-regrole]").forEach((b) => b.addEventListener("click", () => { state.stuRegRole = b.dataset.regrole; render(); }));
+        document.querySelectorAll("[data-sturole]").forEach((b) => b.addEventListener("click", () => { state.stuRoleFilter = b.dataset.sturole; render(); }));
+        $("studentForm")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const fn = $("stFirst").value.trim();
+          const ln = $("stLast").value.trim();
+          const parts = $("stClass").value.trim().split(/\s+/);
+          const slug = (fn + "." + ln).toLowerCase().replace(/[^a-z0-9.]/g, "");
+          const msEmail = $("stMs").value.trim().toLowerCase() || (slug + "@" + schoolSlug + ".onmicrosoft.com");
+          const tempPass = "Proca!" + Math.floor(1000 + Math.random() * 9000) + fn.slice(0, 1).toUpperCase() + ln.slice(0, 1).toUpperCase();
+
+          if (state.studentsTableReady) {
+            const { error } = await db.from("students").insert({
+              school_id: state.schoolId,
+              first_name: fn,
+              last_name: ln,
+              class_level: parts[0] || "S1",
+              stream: parts.slice(1).join(" ") || "A"
+            });
+            if (error) {
+              showToast(error.message);
+              return;
+            }
+            await loadSchoolWorkspace();
+          } else {
+            state.students.unshift({
+              id: "loc_" + Date.now(),
+              school_id: state.schoolId,
+              role: state.stuRegRole,
+              first_name: fn,
+              last_name: ln,
+              microsoft_email: msEmail,
+              class_level: parts[0] || "S1",
+              stream: parts.slice(1).join(" ") || "A",
+              assigned_device_id: null
+            });
+            localStorage.setItem("proca_directory_" + state.schoolId, JSON.stringify(state.students));
+            $("cntStudents").textContent = String(state.students.length);
+            render();
+          }
+          openMsReveal(fn + " " + ln, state.stuRegRole, msEmail, tempPass);
+        });
+        document.querySelectorAll("[data-studev]").forEach((sel) => {
+          sel.addEventListener("change", async () => {
+            if (!state.studentsTableReady) return;
+            const { error } = await db.from("students").update({ assigned_device_id: sel.value || null }).eq("id", sel.dataset.studev);
+            if (error) showToast(error.message); else showToast("Device assignment updated.");
+          });
+        });
+        document.querySelectorAll("[data-delstu]").forEach((b) => {
+          b.addEventListener("click", async () => {
+            if (state.studentsTableReady) {
+              const { error } = await db.from("students").delete().eq("id", b.dataset.delstu);
+              if (error) showToast(error.message); else await loadSchoolWorkspace();
+            } else {
+              state.students = state.students.filter((s) => s.id !== b.dataset.delstu);
+              localStorage.setItem("proca_directory_" + state.schoolId, JSON.stringify(state.students));
+              render();
+            }
+          });
+        });
+      }
+
+      else if (state.activeTab === "branding") {
+        const b = state.branding || {
+          school_display_name: schoolName,
+          motto: "LEARN. FOCUS. ACHIEVE.",
+          welcome_banner: "Supervised School Workstation — Sign in with your Microsoft 365 email.",
+          accent_color: "#0648ef",
+          theme_preset: "slate"
+        };
+        root.innerHTML = `
+          <div style="margin-bottom:20px;">
+            <div class="kicker">Device Experience</div>
+            <h1 class="page-title">Device branding</h1>
+            <p class="page-desc">Preview and configure the lock-screen identity shown on managed school computers.</p>
+          </div>
+          <div class="grid-2">
+            <div class="panel">
+              <h2 style="font-size:14px; margin-bottom:14px;">Lock-screen preview</h2>
+              <div id="brandPreviewBox" class="lockscreen-preview">
+                <div style="display:flex; justify-content:space-between; font-size:11px; font-family:var(--font-mono);">
+                  <span>MANAGED BY PROCA</span><span>08:30</span>
+                </div>
+                <div style="text-align:center; margin:auto 0;">
+                  <div class="brand-icon" style="margin:0 auto 10px; width:44px; height:44px;">P</div>
+                  <strong id="bpName" style="font-size:20px; display:block;">${esc(b.school_display_name)}</strong>
+                  <span id="bpMotto" class="font-mono" style="font-size:11px; letter-spacing:0.15em; color:#12c7f5;">${esc(b.motto)}</span>
+                  <div id="bpBanner" style="margin-top:12px; font-size:12px; opacity:0.92;">${esc(b.welcome_banner)}</div>
+                </div>
+                <div class="font-mono" style="font-size:11px; opacity:0.75;">PROCA Managed Launcher</div>
+              </div>
+            </div>
+            <form id="brandForm" class="panel" style="display:grid; gap:14px; align-content:start;">
+              <h2 style="font-size:14px;">Branding settings</h2>
+              <div><label class="field-label">School Display Name</label><input id="brName" class="input" value="${esc(b.school_display_name)}" /></div>
+              <div><label class="field-label">Motto</label><input id="brMotto" class="input font-mono" value="${esc(b.motto)}" /></div>
+              <div><label class="field-label">Welcome Banner</label><input id="brBanner" class="input" value="${esc(b.welcome_banner)}" /></div>
+              <div><label class="field-label">Accent Color</label><input id="brColor" class="input font-mono" value="${esc(b.accent_color)}" /></div>
+              <button type="submit" class="btn btn-primary">Save Branding</button>
+            </form>
+          </div>
+        `;
+        $("brandForm")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const next = {
+            school_id: state.schoolId,
+            school_display_name: $("brName").value.trim(),
+            motto: $("brMotto").value.trim(),
+            welcome_banner: $("brBanner").value.trim(),
+            accent_color: $("brColor").value.trim() || "#0648ef",
+            theme_preset: "slate"
+          };
+          if (state.brandingTableReady) {
+            const { error } = await db.from("device_branding").upsert(next, { onConflict: "school_id" });
+            if (error) { showToast(error.message); return; }
+          } else {
+            localStorage.setItem("proca_branding_" + state.schoolId, JSON.stringify(next));
+          }
+          state.branding = next;
+          showToast("Branding saved.");
+          render();
+        });
+      }
+
+      else if (state.activeTab === "reports") {
+        root.innerHTML = `
+          <div style="margin-bottom:20px;">
+            <div class="kicker">Compliance &amp; Reporting</div>
+            <h1 class="page-title">Audit &amp; CSV exports</h1>
+            <p class="page-desc">Download school device inventory, whitelisted Chrome web apps, or blocked domains as CSV.</p>
+          </div>
+          <div class="grid-3">
+            <div class="panel">
+              <h2 style="font-size:15px;">Fleet Inventory CSV</h2>
+              <p class="muted" style="font-size:12px; margin:6px 0 16px;">Export ${state.devices.length} enrolled endpoints and current status.</p>
+              <button type="button" id="expDevices" class="btn btn-primary">Download Devices CSV</button>
+            </div>
+            <div class="panel">
+              <h2 style="font-size:15px;">App Whitelist CSV</h2>
+              <p class="muted" style="font-size:12px; margin:6px 0 16px;">Export ${state.whitelist.length} application rules.</p>
+              <button type="button" id="expApps" class="btn btn-primary">Download Whitelist CSV</button>
+            </div>
+            <div class="panel">
+              <h2 style="font-size:15px;">Blocked Domains CSV</h2>
+              <p class="muted" style="font-size:12px; margin:6px 0 16px;">Export ${state.domains.length} web filtering rules.</p>
+              <button type="button" id="expDomains" class="btn btn-primary">Download Domains CSV</button>
+            </div>
+          </div>
+        `;
+        const dlCsv = (name, rows) => {
+          const keys = Object.keys(rows[0] || { empty: "no_rows" });
+          const csv = [keys.join(","), ...rows.map((r) => keys.map((k) => `"${String(r[k] ?? "").replace(/"/g, '""')}"`).join(","))].join("\n");
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+          a.download = name;
+          a.click();
+        };
+        $("expDevices")?.addEventListener("click", () => dlCsv("proca-devices.csv", state.devices));
+        $("expApps")?.addEventListener("click", () => dlCsv("proca-whitelist.csv", state.whitelist));
+        $("expDomains")?.addEventListener("click", () => dlCsv("proca-blocked-domains.csv", state.domains));
+      }
+
+      else if (state.activeTab === "settings") {
+        root.innerHTML = `
+          <div style="margin-bottom:20px;">
+            <div class="kicker">Workspace &amp; Security</div>
+            <h1 class="page-title">Settings</h1>
+          </div>
+          <div class="grid-2">
+            <div class="panel">
+              <h2 style="font-size:15px; margin-bottom:10px;">Connected Supabase Project</h2>
+              <p class="font-mono muted" style="font-size:12px;">${esc(SUPABASE_URL)}</p>
+              <p style="font-size:13px; margin-top:12px;">Signed in as <strong>${esc(state.user?.email || "—")}</strong></p>
+              <p style="font-size:13px;">Role: <strong style="text-transform:capitalize;">${esc(String(state.profile?.role || "").replaceAll("_", " "))}</strong></p>
+            </div>
+            <div class="panel">
+              <h2 style="font-size:15px; margin-bottom:10px;">Launcher &amp; Chrome Safety</h2>
+              <p class="muted" style="font-size:13px; line-height:1.6;">
+                Managed Launcher mode keeps Windows and Android boot intact while locking the menu and requiring Microsoft 365 login. Break-glass rollback remains available in every downloaded Windows agent bundle.
+              </p>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    (async () => {
+      const { data: { session } } = await db.auth.getSession();
+      if (session?.user) {
+        await bootstrapAuthenticated(session.user);
+      }
+    })();
+  </script>
+</body>
 </html>
